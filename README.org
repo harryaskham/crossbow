@@ -3,3 +3,22 @@
 A dynamic, interactive programming language.
 
 Solve problems with arrows.
+
+* TODO
+- [ ] Character-by-character interface
+- [ ] Pipe one thing to another
+- [ ] Loose laws about what thing can pass to another; very dynamic type system
+- [ ] Shortcuts for referring to output of previous line
+- [ ] Basic arithmetic
+- [ ] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
+- [ ] Single pipes
+- [ ] Display pipe result, truncated, in real time
+- [ ] easy file input
+- [ ] parsing as default
+- [ ] huge standard library of things
+  - search functions
+  - algorithms
+  - countmap
+  - bitwise stuff
+- [ ] use AOC as a testbed, are there tiny solutions to each part of each day?
+- [ ] simple precedence; no parens. arrows instead

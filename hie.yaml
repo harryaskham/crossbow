@@ -9,10 +9,28 @@ cradle:
     - path: "src/Main.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "app/Crossbow/Lib.hs"
+    - path: "app/Crossbow/Types.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "src/Crossbow/Lib.hs"
+    - path: "app/Crossbow/Parser.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "app/Crossbow/Util.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "app/Crossbow/Interpreter.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Crossbow/Types.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Crossbow/Parser.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Crossbow/Util.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Crossbow/Interpreter.hs"
       component: "crossbow:exe:crossbow"
 
     - path: "test"

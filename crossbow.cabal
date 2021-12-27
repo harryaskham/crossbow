@@ -7,6 +7,7 @@ maintainer:         harryaskham@gmail.com
 common common-settings
     build-depends:      base ^>=4.14.1.0,
                         relude,
+                        haskeline,
                         parsec,
                         vector,
                         array,
@@ -83,14 +84,20 @@ common common-settings
 library
     import:             common-settings
     hs-source-dirs:     src
-    exposed-modules:    Crossbow.Lib
+    exposed-modules:    Crossbow.Types,
+                        Crossbow.Parser,
+                        Crossbow.Util,
+                        Crossbow.Interpreter
 
 executable crossbow
     import:             common-settings
     main-is:            Main.hs
     hs-source-dirs:     app,
                         src
-    other-modules:      Crossbow.Lib
+    other-modules:      Crossbow.Types,
+                        Crossbow.Parser,
+                        Crossbow.Util,
+                        Crossbow.Interpreter
 
 Test-Suite projectname-testsuite
     import:             common-settings
@@ -98,6 +105,9 @@ Test-Suite projectname-testsuite
     type:               exitcode-stdio-1.0
     hs-source-dirs:     test
                         src
-    other-modules:      Crossbow.Lib
+    other-modules:      Crossbow.Types,
+                        Crossbow.Parser,
+                        Crossbow.Util,
+                        Crossbow.Interpreter
     build-depends:      QuickCheck,
                         HUnit
