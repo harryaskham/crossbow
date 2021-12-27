@@ -5,6 +5,8 @@ A dynamic, interactive programming language.
 Solve problems with arrows.
 
 * TODO
+- [ ] Write large test suite of stuff
+- [ ] Test driven development
 - [ ] Character-by-character interface
 - [ ] Pipe one thing to another
 - [ ] Loose laws about what thing can pass to another; very dynamic type system
