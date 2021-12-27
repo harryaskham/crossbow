@@ -1,0 +1,103 @@
+cabal-version:      2.4
+name:               crossbow
+version:            0.1.0.0
+author:             Harry Askham
+maintainer:         harryaskham@gmail.com
+
+common common-settings
+    build-depends:      base ^>=4.14.1.0,
+                        relude,
+                        parsec,
+                        vector,
+                        array,
+                        extra,
+                        text,
+                        containers,
+                        mtl,
+                        bimap,
+                        mod,
+                        template-haskell,
+                        safe,
+                        linear,
+                        lens,
+                        bitwise,
+                        random,
+    default-language:   Haskell2010
+    mixins:             base hiding (Prelude),
+                        relude (Relude as Prelude),
+                        relude
+    default-extensions: OverloadedStrings,
+                        TupleSections,
+                        LambdaCase,
+                        MultiWayIf,
+                        BlockArguments,
+                        ImportQualifiedPost,
+                        EmptyCase,
+                        FlexibleContexts,
+                        FlexibleInstances,
+                        InstanceSigs,
+                        MultiParamTypeClasses,
+                        QuasiQuotes,
+                        NamedFieldPuns,
+                        DeriveFoldable,
+                        DeriveFunctor,
+                        DeriveGeneric,
+                        DeriveLift,
+                        DeriveTraversable,
+                        DerivingStrategies,
+                        GeneralizedNewtypeDeriving,
+                        StandaloneDeriving,
+                        ScopedTypeVariables,
+                        ConstraintKinds,
+                        RankNTypes,
+                        TypeApplications,
+                        ApplicativeDo,
+                        DefaultSignatures,
+                        PatternSynonyms,
+                        ExistentialQuantification,
+                        FunctionalDependencies,
+                        GADTs,
+                        DataKinds,
+                        KindSignatures,
+                        StrictData,
+                        TemplateHaskell,
+                        RecordWildCards
+    ghc-options:        -Weverything
+                        -Wno-implicit-prelude
+                        -Wno-unused-imports
+                        -Wno-unused-packages
+                        -Wno-missing-export-lists
+                        -Wno-missing-deriving-strategies
+                        -Wno-missing-safe-haskell-mode
+                        -Wno-missing-exported-signatures
+                        -Wno-missing-import-lists
+                        -Wno-missed-specialisations
+                        -Wno-all-missed-specialisations
+                        -Wno-unsafe
+                        -Wno-safe
+                        -Wno-missing-local-signatures
+                        -Wno-monomorphism-restriction
+                        -Wno-missing-home-modules
+                        -Wno-name-shadowing
+                        -Wno-type-defaults
+library
+    import:             common-settings
+    hs-source-dirs:     src
+    exposed-modules:    Crossbow.Lib
+
+executable crossbow
+    import:             common-settings
+    main-is:            Main.hs
+    hs-source-dirs:     app,
+                        src
+    other-modules:      Crossbow.Lib
+
+Test-Suite projectname-testsuite
+    import:             common-settings
+    main-is:            TestSuite.hs
+    type:               exitcode-stdio-1.0
+    hs-source-dirs:     test
+                        src
+    other-modules:      Crossbow.Lib
+    build-depends:      QuickCheck,
+                        HUnit

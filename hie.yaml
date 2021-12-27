@@ -1,0 +1,22 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:crossbow"
+
+    - path: "app/Main.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Main.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "app/Crossbow/Lib.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "src/Crossbow/Lib.hs"
+      component: "crossbow:exe:crossbow"
+
+    - path: "test"
+      component: "crossbow:test:projectname-testsuite"
+
+    - path: "src"
+      component: "crossbow:test:projectname-testsuite"
