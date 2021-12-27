@@ -21,4 +21,5 @@ main = do
   assertEvaluatesTo "positive constant" "123" (VInt 123)
   assertEvaluatesTo "negative constant" "-123" (VInt (-123))
   assertEvaluatesTo "addition" "1|+2" (VInt 3)
+  assertEvaluatesTo "addition with spaces" "    1 |   +     2  " (VInt 3)
   assertEvaluatesTo "add a negative" "1|+-2" (VInt (-1))

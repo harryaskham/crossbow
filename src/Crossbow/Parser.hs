@@ -12,23 +12,26 @@ type P = GenParser Char ()
 distinct :: [P a] -> P a
 distinct = choice . fmap try
 
+ignoreSpaces :: P a -> P a
+ignoreSpaces p = spaces *> p <* spaces
+
 compile :: Text -> Either ParseError Program
 compile = parse program "" . T.unpack
 
 clauseDivider :: P Char
-clauseDivider = spaces *> char '|' <* spaces
+clauseDivider = char '|'
 
 program :: P Program
 program = Program <$> clause `sepBy` clauseDivider
 
 clause :: P Clause
-clause = distinct [clConstant, clOperation]
+clause = ignoreSpaces $ distinct [clConstant, clOperation]
 
 value :: P Value
-value = VInt . readOne (signed decimal) . T.pack <$> many1 (oneOf "-0123456789")
+value = VInt . readOne (signed decimal) . T.pack <$> ignoreSpaces (many1 (oneOf "-0123456789"))
 
 operator :: P Operator
-operator = char '+' >> return OPAdd
+operator = ignoreSpaces $ char '+' >> return OPAdd
 
 clConstant :: P Clause
 clConstant = CLConstant <$> value
