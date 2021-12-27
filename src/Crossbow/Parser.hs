@@ -1,4 +1,4 @@
-module Crossbow.Parser where
+module Crossbow.Parser (compile) where
 
 import Crossbow.Types
 import Crossbow.Util
@@ -6,29 +6,35 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, signed)
 import Text.ParserCombinators.Parsec hiding (many)
 
-compile :: Text -> Either ParseError Program
-compile = parse parseProgram "" . T.unpack
+type P = GenParser Char ()
 
-clauseDivider :: GenParser Char () Char
+-- Parse one of the things given, backtracking on failure
+distinct :: [P a] -> P a
+distinct = choice . fmap try
+
+compile :: Text -> Either ParseError Program
+compile = parse program "" . T.unpack
+
+clauseDivider :: P Char
 clauseDivider = spaces *> char '|' <* spaces
 
-parseProgram :: GenParser Char () Program
-parseProgram = Program <$> parseClause `sepBy` clauseDivider
+program :: P Program
+program = Program <$> clause `sepBy` clauseDivider
 
-parseClause :: GenParser Char () Clause
-parseClause = choice (try <$> [parseCLConstant, parseCLOperation])
+clause :: P Clause
+clause = distinct [clConstant, clOperation]
 
-parseValue :: GenParser Char () Value
-parseValue = VInt . readOne (signed decimal) . T.pack <$> many1 (oneOf "-0123456789")
+value :: P Value
+value = VInt . readOne (signed decimal) . T.pack <$> many1 (oneOf "-0123456789")
 
-parseOperator :: GenParser Char () Operator
-parseOperator = char '+' >> return OPAdd
+operator :: P Operator
+operator = char '+' >> return OPAdd
 
-parseCLConstant :: GenParser Char () Clause
-parseCLConstant = CLConstant <$> parseValue
+clConstant :: P Clause
+clConstant = CLConstant <$> value
 
-parseCLOperation :: GenParser Char () Clause
-parseCLOperation = do
-  op <- parseOperator
+clOperation :: P Clause
+clOperation = do
+  op <- operator
   spaces
-  CLOperation op <$> parseValue
+  CLOperation op <$> value
