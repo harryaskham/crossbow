@@ -22,3 +22,8 @@ Solve problems with arrows.
   - bitwise stuff
 - [ ] use AOC as a testbed, are there tiny solutions to each part of each day?
 - [ ] simple precedence; no parens. arrows instead
+- [ ] variable allocation
+- [ ] function definition
+- [ ] interpreted multiline functions
+- [ ] native terminal colors (see tetris, no curses)
+- [ ] kb shortcuts for skipping between clauses
