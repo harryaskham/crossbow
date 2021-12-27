@@ -39,5 +39,4 @@ clConstant = CLConstant <$> value
 clOperation :: P Clause
 clOperation = do
   op <- operator
-  spaces
   CLOperation op <$> value
