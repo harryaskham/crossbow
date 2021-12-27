@@ -5,15 +5,16 @@ A dynamic, interactive programming language.
 Solve problems with arrows.
 
 * TODO
-- [ ] Write large test suite of stuff
-- [ ] Test driven development
+- [ ] good tests
 - [ ] Character-by-character interface
-- [ ] Pipe one thing to another
+- [ ] intermediate state display by default
+- [X] Pipe one thing to another
+- [ ] easy collection literals
 - [ ] Loose laws about what thing can pass to another; very dynamic type system
-- [ ] Shortcuts for referring to output of previous line
-- [ ] Basic arithmetic
+- [ ] Shortcuts for referring to output of previous line / assignment
+- [X] Basic arithmetic
 - [ ] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
-- [ ] Single pipes
+- [X] Single pipes
 - [ ] Display pipe result, truncated, in real time
 - [ ] easy file input
 - [ ] parsing as default
