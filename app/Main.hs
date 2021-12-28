@@ -20,6 +20,6 @@ main = runInputT defaultSettings loop
             Right program -> do
               when debug (liftIO $ print program)
               result <- liftIO $ run program
-              print result
+              print (pretty <$> result)
             Left e -> liftIO $ print (show e)
           loop

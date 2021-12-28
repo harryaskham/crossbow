@@ -5,29 +5,46 @@ A dynamic, interactive programming language.
 Solve problems with arrows.
 
 * TODO
-- [ ] good tests
-- [ ] Character-by-character interface
-- [ ] intermediate state display by default
-- [X] Pipe one thing to another
-- [ ] easy collection literals
-- [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
-- [ ] Loose laws about what thing can pass to another; very dynamic type system
-- [ ] Shortcuts for referring to output of previous line / assignment
-- [X] Basic arithmetic
-- [ ] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
-- [X] Single pipes
-- [ ] Display pipe result, truncated, in real time
-- [ ] easy file input
-- [ ] parsing as default
-- [ ] huge standard library of things
-  - search functions
-  - algorithms
-  - countmap
-  - bitwise stuff
-- [ ] use AOC as a testbed, are there tiny solutions to each part of each day?
-- [ ] simple precedence; no parens. arrows instead
-- [ ] variable allocation
-- [ ] function definition
-- [ ] interpreted multiline functions
-- [ ] native terminal colors (see tetris, no curses)
-- [ ] kb shortcuts for skipping between clauses
+- next
+  - rework operators to be functions that can be partially or fully applied
+  - file input
+- language features
+  - [ ] variable allocation
+  - [ ] scoping rules
+  - [ ] function definition
+  - [ ] predicates, bools and truthiness
+  - [ ] 0, [] and False all falsy???
+  - [ ] control flow like splitif? or masking like APL?
+  - [ ] function values
+  - [ ] functions applied to functions is just composition
+  - [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
+  - [X] Pipe one thing to another
+  - [ ] easy collection literals (e,g, 1 2 3 or 1,2,3) without ambiguity e.g is 1 [1] or 1
+  - [ ] Shortcuts for referring to output of previous line / assignment
+  - [ ] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
+  - [ ] explicit casting
+  - [ ] text handling
+  - [ ] easy file input
+  - [ ] if no file input, assume dealing with STDIN?
+  - [X] Basic arithmetic
+  - [X] Single pipes
+- ui features
+  - [ ] Character-by-character interface
+  - [ ] intermediate state display by default
+  - [ ] tree mode; curses shows splits as a graph
+  - [ ] native terminal colors (see tetris, no curses)
+  - [ ] kb shortcuts for skipping between clauses
+  - [ ] Display pipe result, truncated, in real time
+- standard library
+  - [ ] simple parsing
+  - [ ] sorting
+  - [ ] search
+  - [ ] DS from prims (trees from list-nests, etc)
+  - [ ] assoc lists
+  - [ ] map utils like countmap
+  - [ ] bitwise stuff
+- misc goals
+  - [ ] solve 2021 AOC day by day
+  - [ ] compiled backend
+  - [ ] an interpreter / compiler written in Crossbow
+  - [ ] model for actual IO computation
