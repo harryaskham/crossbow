@@ -1,5 +1,6 @@
 module Crossbow.Parser (compile) where
 
+import Crossbow.Interpreter (evalF, getUnbound)
 import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
@@ -42,11 +43,16 @@ value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber]
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
     vList = VList <$> between (char '[') (char ']') (value `sepBy1` char ',')
-    vFuncR = VFunction . fromRight' <$> (mkFuncR <$> operator <*> many1 value)
-    vLiteral = firstOf [vList, vNumber]
+    -- If this function is already fully bound, reduce it down to a value
+    maybeApply f
+      | null (getUnbound f) = fromRight' (evalF f)
+      | otherwise = VFunction f
+    vFuncR = maybeApply . fromRight' <$> (mkFuncR <$> operator <*> many1 value)
     -- Only allow literal partial right application to avoid infinite parsing
-    vFuncL = VFunction . fromRight' <$> (flip mkFuncL <$> many1 vLiteral <*> operator)
-    vFunc = VFunction . mkFunc <$> operator
+    vLiteral = firstOf [vList, vNumber]
+    vFuncL = maybeApply . fromRight' <$> (flip mkFuncL <$> many1 vLiteral <*> operator)
+    -- Finally, a func with no arguments
+    vFunc = maybeApply . mkFunc <$> operator
 
 data ArgNumError = ArgNumError
 

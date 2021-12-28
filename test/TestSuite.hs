@@ -12,7 +12,7 @@ assertEvaluatesTo msg program expected = do
   case compile program of
     Left e -> assertFailure (T.unpack msg <> show e)
     Right p -> do
-      resultM <- run (Just $ ProgramState Nothing) p
+      resultM <- run p
       assertEqual (T.unpack msg) resultM (Just expected)
 
 main :: IO ()
