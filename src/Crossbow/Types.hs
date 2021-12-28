@@ -28,6 +28,10 @@ instance Semigroup Value where
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
 
+vCons :: Value -> Value -> Value
+vCons a (VList bs) = VList (a : bs)
+vCons _ _ = error "Invalid cons"
+
 asText :: Value -> Text
 asText (VInteger a) = show a
 asText (VDouble a) = show a
@@ -95,7 +99,9 @@ data OpImpl
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
 
-data Clause = CLValue Value deriving (Show, Eq)
+data Clause = CLValue Value Divider deriving (Show, Eq)
+
+data Divider = ForwardDiv | BackwardDiv | NoDiv deriving (Show, Eq)
 
 data Program = Program [Clause] deriving (Show, Eq)
 
@@ -129,32 +135,3 @@ instance Pretty Argument where
 
 instance Pretty OpType where
   pretty (OpType t) = t
-
-builtins :: Map Text (Valence, OpImpl)
-builtins =
-  M.fromList
-    [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
-      ("max", (Valence 2, HSImpl (\[a, b] -> max a b))),
-      ("min", (Valence 2, HSImpl (\[a, b] -> min a b))),
-      ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
-      ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
-      ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
-      ( "read",
-        ( Valence 1,
-          HSImplIO
-            ( \[a] -> do
-                t <- readFile (T.unpack $ asText a)
-                return (VList $ VChar <$> t)
-            )
-        )
-      ),
-      ( "input",
-        ( Valence 0,
-          HSImplIO
-            ( \_ -> do
-                t <- T.unpack <$> getLine
-                return (VList $ VChar <$> t)
-            )
-        )
-      )
-    ]

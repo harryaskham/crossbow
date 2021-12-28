@@ -1,6 +1,6 @@
 module Crossbow.Parser (compile) where
 
-import Crossbow.Interpreter (evalF, getUnbound)
+import Crossbow.Interpreter (builtins, evalF, getUnbound)
 import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
@@ -25,14 +25,18 @@ ignoreSpaces p = spaces *> p <* spaces
 compile :: Text -> Either ParseError Program
 compile = parse program "" . T.unpack
 
-clauseDivider :: P Char
-clauseDivider = char '|'
+clauseDivider :: P Divider
+clauseDivider =
+  ignoreSpaces $
+    (char '|' >> return ForwardDiv)
+      <|> (char '&' >> return BackwardDiv)
+      <|> return NoDiv
 
 program :: P Program
-program = Program <$> (clause `sepBy` clauseDivider)
+program = Program <$> many clause
 
 clause :: P Clause
-clause = clValue
+clause = CLValue <$> value <*> clauseDivider
 
 value :: P Value
 value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
@@ -83,6 +87,3 @@ operator = ignoreSpaces $ do
   k <- T.pack <$> firstOf (string . T.unpack <$> M.keys builtins)
   let (v, _) = builtins M.! k
   return $ Operator (OpType k) v
-
-clValue :: P Clause
-clValue = CLValue <$> value
