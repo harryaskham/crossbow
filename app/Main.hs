@@ -6,6 +6,7 @@ import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline
 
+debug :: Bool
 debug = True
 
 main :: IO ()
@@ -20,6 +21,8 @@ main = runInputT defaultSettings loop
             Right program -> do
               when debug (liftIO $ print program)
               result <- liftIO $ run program
-              print (pretty <$> result)
+              case result of
+                Nothing -> print "Unknown error"
+                Just r -> putTextLn (pretty r)
             Left e -> liftIO $ print (show e)
           loop
