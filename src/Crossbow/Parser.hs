@@ -43,7 +43,7 @@ value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
         else return . VInteger $ readOne (signed decimal) x
     vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
-    vString = VList <$> between (char '"') (char '"') (many (VChar <$> anyChar))
+    vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
     -- If this function is already fully bound, reduce it down to a value
     maybeApply f
       | null (getUnbound f) = fromRight' (evalF f)
