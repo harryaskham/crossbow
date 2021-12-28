@@ -9,7 +9,7 @@ debug :: Bool
 debug = False
 
 main :: IO ()
-main = runInputT defaultSettings loop
+main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True}) loop
   where
     loop = do
       inputM <- getInputLine "|-> "
