@@ -29,7 +29,7 @@ clauseDivider :: P Divider
 clauseDivider =
   ignoreSpaces $
     (char '|' >> return ForwardDiv)
-      <|> (char '&' >> return BackwardDiv)
+      <|> (string "<|" >> return BackwardDiv)
       <|> return NoDiv
 
 program :: P Program

@@ -43,3 +43,5 @@ main = do
   assertEvaluatesTo "string aliases to list" "\"hi\"" (VList $ VChar <$> ['h', 'i'])
   assertEvaluatesTo "read file" "read \"test/test_input.txt\"" (VList $ VChar <$> T.unpack "test\ninput\n")
   assertEvaluatesTo "map over list" "map|+1|[1,2,3]" (VList $ VInteger <$> [2, 3, 4])
+  assertEvaluatesTo "map forward over list" "map <| +1 | [1,2,3]" (VList $ VInteger <$> [2, 3, 4])
+  assertEvaluatesTo "map forward over list" "[1,2,3] | map | +1" (VList $ VInteger <$> [2, 3, 4])
