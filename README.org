@@ -6,9 +6,9 @@ Solve problems with arrows.
 
 * TODO
 - next
-  - rework operators to be functions that can be partially or fully applied
   - file input
 - language features
+  - [ ] builtins defined in terms of the language itself - e.g. map n fold
   - [ ] variable allocation
   - [ ] scoping rules
   - [ ] function definition

@@ -12,7 +12,7 @@ assertEvaluatesTo msg program expected = do
   case compile program of
     Left e -> assertFailure (T.unpack msg <> show e)
     Right p -> do
-      resultM <- run p
+      resultM <- run (Just $ ProgramState Nothing) p
       assertEqual (T.unpack msg) resultM (Just expected)
 
 main :: IO ()
@@ -33,5 +33,4 @@ main = do
   assertEvaluatesTo "list concatenation" "[1,2,3]|+[4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
   assertEvaluatesTo "list addition" "[1,2,3]|+10" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "reverse list addition" "10|+[1,2,3]" (VList $ VInteger <$> [11, 12, 13])
-
---assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)
+  assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)

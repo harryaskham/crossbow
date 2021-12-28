@@ -1,5 +1,6 @@
 module Crossbow.Types where
 
+import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 
 data Value = VInteger Integer | VDouble Double | VList [Value] | VFunction Function deriving (Show, Eq)
@@ -17,9 +18,11 @@ data Argument = Unbound | Bound Value deriving (Show, Eq)
 
 data Function = Function Operator [Argument] deriving (Show, Eq)
 
-data OpType = OPAdd deriving (Show, Eq)
+data OpType = OpType Text deriving (Show, Eq)
 
 newtype Valence = Valence Int deriving (Show, Eq)
+
+data OpImpl = HSImpl ([Value] -> Value) | CBImpl Program
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
 
@@ -45,4 +48,7 @@ instance Pretty Argument where
   pretty (Bound v) = pretty v
 
 instance Pretty OpType where
-  pretty OPAdd = "(+)"
+  pretty (OpType t) = t
+
+builtins :: Map Text (Valence, OpImpl)
+builtins = M.fromList [("+", (Valence 2, HSImpl (\[a, b] -> a <> b)))]

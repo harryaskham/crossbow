@@ -4,6 +4,7 @@ import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
+import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
@@ -69,7 +70,10 @@ mkFuncR o@(Operator _ (Valence v)) args
      in Right $ Function o (unbound ++ bound)
 
 operator :: P Operator
-operator = ignoreSpaces $ char '+' >> return (Operator OPAdd (Valence 2))
+operator = ignoreSpaces $ do
+  k <- T.pack <$> firstOf (string . T.unpack <$> M.keys builtins)
+  let (v, _) = builtins M.! k
+  return $ Operator (OpType k) v
 
 clValue :: P Clause
 clValue = CLValue <$> value

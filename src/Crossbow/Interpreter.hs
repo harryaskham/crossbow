@@ -2,14 +2,29 @@ module Crossbow.Interpreter where
 
 import Crossbow.Types
 import Data.Either.Extra (fromRight')
+import Data.Map.Strict qualified as M
 
 -- TODO: Expand to include all kinds of things like arrow branching, etc
 data ProgramState = ProgramState (Maybe Value)
 
 run :: Program -> IO (Maybe Value)
-run program =
-  let (ProgramState v) = go (ProgramState Nothing) program
+run program = runWith program (ProgramState Nothing)
+
+runWith :: Program -> ProgramState -> IO (Maybe Value)
+runWith program ps =
+  let (ProgramState v) = go ps program
    in return v
+  where
+    go ps (Program []) = ps
+    go ps (Program (c : cs)) = go (runClause ps c) (Program cs)
+
+runPure :: Program -> Maybe Value
+runPure program = runPureWith program (ProgramState Nothing)
+
+runPureWith :: Program -> ProgramState -> Maybe Value
+runPureWith program ps =
+  let (ProgramState v) = go ps program
+   in v
   where
     go ps (Program []) = ps
     go ps (Program (c : cs)) = go (runClause ps c) (Program cs)
@@ -61,19 +76,31 @@ applyF f value bindDir
   where
     unbound = getUnbound f
 
-data EvalPartialError = EvalPartialError
+data EvalError = EvalError Text
 
 unbind :: Argument -> Value
 unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
-evalF :: Function -> Either EvalPartialError Value
-evalF f@(Function (Operator opType (Valence valence)) args)
-  | not (null $ getUnbound f) = Left EvalPartialError
-  | valence == 2 =
-    let [a, b] = argVals
-     in case opType of
-          OPAdd -> Right $ a <> b
-  | otherwise = error "Invalid valence / op combo"
+implementation :: OpType -> OpImpl
+implementation (OpType "+") = HSImpl (\[a, b] -> a <> b)
+implementation (OpType o) = error $ "Unsupported op: " <> o
+
+evalF :: Function -> Either EvalError Value
+evalF f@(Function (Operator (OpType t) (Valence v)) args)
+  | not (null $ getUnbound f) = Left $ EvalError "Can't evaluate with unbound variables"
+  | otherwise =
+    case M.lookup t builtins of
+      Nothing -> Left $ EvalError ("Unsupported opType: " <> t)
+      Just (_, HSImpl hsF) ->
+        if length argVals == v
+          then Right $ hsF argVals
+          else Left $ EvalError "Can't run HS impl without correct valence"
+      Just (_, CBImpl cbF) ->
+        case argVals of
+          [arg] -> case runPureWith cbF (ProgramState (Just arg)) of
+            Nothing -> Left $ EvalError "Unknown failure running CBImpl"
+            Just result -> Right result
+          _ -> Left $ EvalError "Can only run CB impl monadically"
   where
     argVals = unbind <$> args
