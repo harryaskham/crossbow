@@ -95,7 +95,7 @@ newtype Valence = Valence Int deriving (Show, Eq)
 data OpImpl
   = HSImpl ([Value] -> Value)
   | HSImplIO ([Value] -> IO Value)
-  | CBImpl Program
+  | CBImpl Text
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
 
