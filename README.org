@@ -2,7 +2,7 @@
 
 A dynamic, interactive programming language.
 
-Solve problems with arrows.
+Solve problems using arrows.
 
 * TODO
 - next

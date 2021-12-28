@@ -6,7 +6,13 @@ import Data.Char
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 
-data Value = VInteger Integer | VDouble Double | VChar Char | VList [Value] | VFunction Function deriving (Show, Eq)
+data Value
+  = VInteger Integer
+  | VDouble Double
+  | VChar Char
+  | VList [Value]
+  | VFunction Function
+  deriving (Show, Eq)
 
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
@@ -21,6 +27,13 @@ instance Semigroup Value where
   (VList a) <> (VList b) = VList (a ++ b)
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
+
+asText :: Value -> Text
+asText (VInteger a) = show a
+asText (VDouble a) = show a
+asText (VChar a) = T.pack [a]
+asText (VList as) = mconcat (asText <$> as)
+asText (VFunction _) = error "Can't coerce function to text"
 
 isNumeric :: Value -> Bool
 isNumeric (VInteger _) = True
@@ -75,13 +88,24 @@ data OpType = OpType Text deriving (Show, Eq)
 
 newtype Valence = Valence Int deriving (Show, Eq)
 
-data OpImpl = HSImpl ([Value] -> Value) | CBImpl Program
+data OpImpl
+  = HSImpl ([Value] -> Value)
+  | HSImplIO ([Value] -> IO Value)
+  | CBImpl Program
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
 
 data Clause = CLValue Value deriving (Show, Eq)
 
 data Program = Program [Clause] deriving (Show, Eq)
+
+isChar :: Value -> Bool
+isChar (VChar _) = True
+isChar _ = False
+
+isString :: Value -> Bool
+isString (VList as) = all isChar as
+isString _ = False
 
 class Pretty a where
   pretty :: a -> Text
@@ -90,7 +114,9 @@ instance Pretty Value where
   pretty (VInteger a) = show a
   pretty (VDouble a) = show a
   pretty (VChar a) = show a
-  pretty (VList a) = "[" <> T.intercalate "," (pretty <$> a) <> "]"
+  pretty s@(VList a)
+    | isString s = T.pack $ (\(VChar c) -> c) <$> a
+    | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
 
 instance Pretty Function where
@@ -112,5 +138,23 @@ builtins =
       ("min", (Valence 2, HSImpl (\[a, b] -> min a b))),
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
-      ("char", (Valence 1, HSImpl (\[a] -> castToChar a)))
+      ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
+      ( "read",
+        ( Valence 1,
+          HSImplIO
+            ( \[a] -> do
+                t <- readFile (T.unpack $ asText a)
+                return (VList $ VChar <$> t)
+            )
+        )
+      ),
+      ( "input",
+        ( Valence 0,
+          HSImplIO
+            ( \_ -> do
+                t <- T.unpack <$> getLine
+                return (VList $ VChar <$> t)
+            )
+        )
+      )
     ]

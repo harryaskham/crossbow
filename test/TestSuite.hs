@@ -41,3 +41,4 @@ main = do
   assertEvaluatesTo "cast to double" "2|double" (VDouble 2.0)
   assertEvaluatesTo "cast list to double" "[2, 3]|double" (VList $ VDouble <$> [2.0, 3.0])
   assertEvaluatesTo "string aliases to list" "\"hi\"" (VList $ VChar <$> ['h', 'i'])
+  assertEvaluatesTo "read file" "read \"test/test_input.txt\"" (VList $ VChar <$> T.unpack "test\ninput\n")

@@ -9,6 +9,7 @@ import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
+import GHC.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
 import Prelude hiding (optional)
 
@@ -44,9 +45,10 @@ value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
     vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
-    -- If this function is already fully bound, reduce it down to a value
+    -- TODO: Uses unsafePerformIO to reduce functions as we parse
+    -- This will break e.g. fully applied getline
     maybeApply f
-      | null (getUnbound f) = fromRight' (evalF f)
+      | null (getUnbound f) = fromRight' (unsafePerformIO $ evalF f)
       | otherwise = VFunction f
     vFuncR = maybeApply . fromRight' <$> (mkFuncR <$> operator <*> many1 value)
     -- Only allow literal partial right application to avoid infinite parsing

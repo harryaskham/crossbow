@@ -11,42 +11,33 @@ run :: Program -> IO (Maybe Value)
 run program = runWith program (ProgramState Nothing)
 
 runWith :: Program -> ProgramState -> IO (Maybe Value)
-runWith program ps =
-  let (ProgramState v) = go ps program
-   in return v
+runWith program ps = do
+  (ProgramState v) <- go ps program
+  return v
   where
-    go ps (Program []) = ps
-    go ps (Program (c : cs)) = go (runClause ps c) (Program cs)
+    go ps (Program []) = return ps
+    go ps (Program (c : cs)) = do
+      ps' <- runClause ps c
+      go ps' (Program cs)
 
-runPure :: Program -> Maybe Value
-runPure program = runPureWith program (ProgramState Nothing)
-
-runPureWith :: Program -> ProgramState -> Maybe Value
-runPureWith program ps =
-  let (ProgramState v) = go ps program
-   in v
-  where
-    go ps (Program []) = ps
-    go ps (Program (c : cs)) = go (runClause ps c) (Program cs)
-
-runClause :: ProgramState -> Clause -> ProgramState
+runClause :: ProgramState -> Clause -> IO ProgramState
 -- If we're running a function / defining a constant on no state, whatever this is becomes the state
-runClause (ProgramState Nothing) (CLValue v) = ProgramState $ Just v
+runClause (ProgramState Nothing) (CLValue v) = return . ProgramState $ Just v
 -- Running a function on state applies it
-runClause (ProgramState (Just ps)) (CLValue v) = ProgramState $ Just (apply ps v)
+runClause (ProgramState (Just ps)) (CLValue v) = ProgramState . Just <$> apply ps v
 
 data BindDir = BindFromLeft | BindFromRight
 
 -- Apply the second value to the first in left-to-right fashion.
-apply :: Value -> Value -> Value
+apply :: Value -> Value -> IO Value
 -- Two functions compose together, if possible
 apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v = fromRight' $ applyF f v BindFromLeft
+apply (VFunction f) v = fromRight' <$> applyF f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) = fromRight' $ applyF f v BindFromRight
+apply v (VFunction f) = fromRight' <$> applyF f v BindFromRight
 -- If we have a value with a value, just override it
-apply _ v = v
+apply _ v = return v
 
 data ApplyValenceError = ApplyValenceError
 
@@ -68,11 +59,13 @@ getBound :: Function -> [Argument]
 getBound (Function _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
-applyF :: Function -> Value -> BindDir -> Either ApplyValenceError Value
+applyF :: Function -> Value -> BindDir -> IO (Either ApplyValenceError Value)
 applyF f value bindDir
-  | null unbound = Left ApplyValenceError
-  | length unbound == 1 = Right (fromRight' $ evalF (bindNext f value bindDir))
-  | length unbound > 1 = Right (VFunction $ bindNext f value bindDir)
+  | null unbound = return $ Left ApplyValenceError
+  | length unbound == 1 = do
+    resultE <- evalF (bindNext f value bindDir)
+    return $ Right (fromRight' resultE)
+  | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
   where
     unbound = getUnbound f
 
@@ -82,21 +75,27 @@ unbind :: Argument -> Value
 unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
-evalF :: Function -> Either EvalError Value
+evalF :: Function -> IO (Either EvalError Value)
 evalF f@(Function (Operator (OpType t) (Valence v)) args)
-  | not (null $ getUnbound f) = Left $ EvalError "Can't evaluate with unbound variables"
+  | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
   | otherwise =
     case M.lookup t builtins of
-      Nothing -> Left $ EvalError ("Unsupported opType: " <> t)
+      Nothing -> return . Left $ EvalError ("Unsupported opType: " <> t)
       Just (_, HSImpl hsF) ->
         if length argVals == v
-          then Right $ hsF argVals
-          else Left $ EvalError "Can't run HS impl without correct valence"
+          then return . Right $ hsF argVals
+          else return . Left $ EvalError "Can't run HS impl without correct valence"
+      Just (_, HSImplIO hsF) ->
+        if length argVals == v
+          then Right <$> hsF argVals
+          else return . Left $ EvalError "Can't run HS impl without correct valence"
       Just (_, CBImpl cbF) ->
         case argVals of
-          [arg] -> case runPureWith cbF (ProgramState (Just arg)) of
-            Nothing -> Left $ EvalError "Unknown failure running CBImpl"
-            Just result -> Right result
-          _ -> Left $ EvalError "Can only run CB impl monadically"
+          [arg] -> do
+            resultM <- runWith cbF (ProgramState (Just arg))
+            case resultM of
+              Nothing -> return . Left $ EvalError "Unknown failure running CBImpl"
+              Just result -> return . Right $ result
+          _ -> return . Left $ EvalError "Can only run CB impl monadically"
   where
     argVals = unbind <$> args
