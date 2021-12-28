@@ -13,8 +13,12 @@ run program =
     go ps (Program []) = ps
     go ps (Program (c : cs)) = go (runClause ps c) (Program cs)
 
+-- The default behaviour when doing this operation on no state
+defOp :: Operator -> Value -> Value
+defOp OPAdd v = v
+
 -- TODO: add IO here
 runClause :: ProgramState -> Clause -> ProgramState
-runClause _ (CLConstant v) = ProgramState (Just v)
-runClause (ProgramState Nothing) (CLOperation op v) = error "TODO: an op on nothing should have default behaviour"
-runClause (ProgramState (Just b)) (CLOperation OPAdd a) = ProgramState $ Just (a <> b)
+runClause _ (CLValue v) = ProgramState (Just v)
+runClause (ProgramState Nothing) (CLOperation op v) = ProgramState $ Just (defOp op v)
+runClause (ProgramState (Just a)) (CLOperation OPAdd b) = ProgramState $ Just (a <> b)

@@ -6,6 +6,8 @@ import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline
 
+debug = True
+
 main :: IO ()
 main = runInputT defaultSettings loop
   where
@@ -16,6 +18,7 @@ main = runInputT defaultSettings loop
         Just input -> do
           case compile (T.pack input) of
             Right program -> do
+              when debug (liftIO $ print program)
               result <- liftIO $ run program
               print result
             Left e -> liftIO $ print (show e)

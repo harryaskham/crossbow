@@ -2,15 +2,17 @@ module Crossbow.Parser (compile) where
 
 import Crossbow.Types
 import Crossbow.Util
+import Data.Foldable (foldl1)
 import Data.Text qualified as T
-import Data.Text.Read (decimal, signed)
-import Text.ParserCombinators.Parsec hiding (many)
+import Data.Text.Read (decimal, double, signed)
+import Data.Text.Read qualified as TR
+import Text.ParserCombinators.Parsec hiding (many, (<|>))
 
 type P = GenParser Char ()
 
 -- Parse one of the things given, backtracking on failure
-distinct :: [P a] -> P a
-distinct = choice . fmap try
+firstOf :: [P a] -> P a
+firstOf = foldl1 (<|>) . fmap try
 
 ignoreSpaces :: P a -> P a
 ignoreSpaces p = spaces *> p <* spaces
@@ -22,21 +24,27 @@ clauseDivider :: P Char
 clauseDivider = char '|'
 
 program :: P Program
-program = Program <$> clause `sepBy` clauseDivider
+program = Program <$> (clause `sepBy` clauseDivider)
 
 clause :: P Clause
-clause = ignoreSpaces $ distinct [clConstant, clOperation]
+clause = ignoreSpaces $ firstOf [clOperator, clValue]
 
 value :: P Value
-value = VInt . readOne (signed decimal) . T.pack <$> ignoreSpaces (many1 (oneOf "-0123456789"))
+value = firstOf [vList, vNumber]
+  where
+    vNumber :: P Value
+    vNumber = do
+      x <- T.pack <$> ignoreSpaces (many1 (oneOf "-.0123456789"))
+      if "." `T.isInfixOf` x
+        then return . VDouble $ readOne (signed double) x
+        else return . VInteger $ readOne (signed decimal) x
+    vList = VList <$> between (char '[') (char ']') (value `sepBy1` char ',')
 
 operator :: P Operator
 operator = ignoreSpaces $ char '+' >> return OPAdd
 
-clConstant :: P Clause
-clConstant = CLConstant <$> value
+clValue :: P Clause
+clValue = CLValue <$> value
 
-clOperation :: P Clause
-clOperation = do
-  op <- operator
-  CLOperation op <$> value
+clOperator :: P Clause
+clOperator = CLOperation <$> operator <*> value

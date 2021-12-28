@@ -10,6 +10,7 @@ Solve problems with arrows.
 - [ ] intermediate state display by default
 - [X] Pipe one thing to another
 - [ ] easy collection literals
+- [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
 - [ ] Loose laws about what thing can pass to another; very dynamic type system
 - [ ] Shortcuts for referring to output of previous line / assignment
 - [X] Basic arithmetic
