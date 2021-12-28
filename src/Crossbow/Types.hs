@@ -1,15 +1,23 @@
+{-# OPTIONS_GHC -Wno-identities #-}
+
 module Crossbow.Types where
 
+import Data.Char
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 
-data Value = VInteger Integer | VDouble Double | VList [Value] | VFunction Function deriving (Show, Eq)
+data Value = VInteger Integer | VDouble Double | VChar Char | VList [Value] | VFunction Function deriving (Show, Eq)
 
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
   (VDouble a) <> (VDouble b) = VDouble (a + b)
   (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
   (VDouble a) <> (VInteger b) = VDouble (a + fromIntegral b)
+  (VChar a) <> (VChar b) = VChar (chr $ ord a + ord b)
+  a@(VChar _) <> (VList bs) = VList (a : bs)
+  (VList as) <> b@(VChar _) = VList (as ++ [b])
+  (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
+  a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
   (VList a) <> (VList b) = VList (a ++ b)
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
@@ -22,20 +30,30 @@ isNumeric _ = False
 castToInt :: Value -> Value
 castToInt v@(VInteger _) = v
 castToInt (VDouble v) = VInteger (round v)
+castToInt (VChar v) = VInteger (fromIntegral $ ord v)
 castToInt (VList vs) = VList (castToInt <$> vs)
 castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
 
 castToDouble :: Value -> Value
 castToDouble v@(VDouble _) = v
 castToDouble (VInteger v) = VDouble (fromIntegral v)
+castToDouble (VChar v) = VDouble (fromIntegral $ ord v)
 castToDouble (VList vs) = VList (castToDouble <$> vs)
 castToDouble f@(VFunction _) = f -- TODO: Compose casting with the given f
+
+castToChar :: Value -> Value
+castToChar v@(VChar _) = v
+castToChar (VInteger v) = VChar (chr (fromIntegral v))
+castToChar (VDouble v) = VChar (chr $ round v)
+castToChar (VList vs) = VList (castToChar <$> vs)
+castToChar f@(VFunction _) = f -- TODO: Compose casting with the given f
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
   _ <= (VFunction _) = error "No Ord for functions"
   (VInteger a) <= (VInteger b) = a <= b
   (VDouble a) <= (VDouble b) = a <= b
+  (VChar a) <= (VChar b) = a <= b
   a@(VInteger _) <= b@(VDouble _) = castToDouble a <= b
   a@(VDouble _) <= b@(VInteger _) = a <= castToDouble b
   (VList []) <= (VList []) = True
@@ -71,6 +89,7 @@ class Pretty a where
 instance Pretty Value where
   pretty (VInteger a) = show a
   pretty (VDouble a) = show a
+  pretty (VChar a) = show a
   pretty (VList a) = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
 
@@ -92,9 +111,6 @@ builtins =
       ("max", (Valence 2, HSImpl (\[a, b] -> max a b))),
       ("min", (Valence 2, HSImpl (\[a, b] -> min a b))),
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
-      ("double", (Valence 1, HSImpl (\[a] -> castToDouble a)))
+      ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
+      ("char", (Valence 1, HSImpl (\[a] -> castToChar a)))
     ]
-
-implementation :: OpType -> OpImpl
-implementation (OpType "+") = HSImpl (\[a, b] -> a <> b)
-implementation (OpType o) = error $ "Unsupported op: " <> o

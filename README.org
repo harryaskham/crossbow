@@ -20,16 +20,16 @@ Solve problems with arrows.
   - [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
   - [ ] easy collection literals (e,g, 1 2 3 or 1,2,3) without ambiguity e.g is 1 [1] or 1
   - [ ] Shortcuts for referring to output of previous line / assignment
-  - [X] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
-  - [ ] explicit casting
   - [ ] text handling
   - [ ] easy file input
-  - [ ] if no file input, assume dealing with STDIN?
+  - [X] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
+  - [X] explicit casting
   - [X] function values
   - [X] Pipe one thing to another
   - [X] Basic arithmetic
   - [X] Single pipes
 - ui features
+  - [ ] special builtin for stdin
   - [ ] Character-by-character interface
   - [ ] intermediate state display by default
   - [ ] tree mode; curses shows splits as a graph

@@ -34,7 +34,7 @@ clause :: P Clause
 clause = clValue
 
 value :: P Value
-value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber]
+value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar]
   where
     vNumber :: P Value
     vNumber = do
@@ -43,6 +43,7 @@ value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber]
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
     vList = VList <$> between (char '[') (char ']') (value `sepBy1` char ',')
+    vChar = VChar <$> between (char '\'') (char '\'') anyChar
     -- If this function is already fully bound, reduce it down to a value
     maybeApply f
       | null (getUnbound f) = fromRight' (evalF f)
