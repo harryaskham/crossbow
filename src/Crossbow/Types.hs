@@ -1,10 +1,10 @@
-{-# OPTIONS_GHC -Wno-identities #-}
-
 module Crossbow.Types where
 
+import Crossbow.Util
 import Data.Char
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
+import Data.Text.Read qualified as TR
 
 data Value
   = VInteger Integer
@@ -48,7 +48,10 @@ castToInt :: Value -> Value
 castToInt v@(VInteger _) = v
 castToInt (VDouble v) = VInteger (round v)
 castToInt (VChar v) = VInteger (fromIntegral $ ord v)
-castToInt (VList vs) = VList (castToInt <$> vs)
+castToInt v@(VList vs)
+  | all (`elem` (VChar <$> ("-0123456789" :: String))) vs =
+    VInteger (readOne (TR.signed TR.decimal) (asText v))
+  | otherwise = VList (castToInt <$> vs)
 castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
 
 castToDouble :: Value -> Value

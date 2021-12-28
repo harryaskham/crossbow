@@ -50,3 +50,4 @@ main = do
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
   assertEvaluatesTo "fans out" "1 <| fanout | 4" (VList $ VInteger <$> [1, 1, 1, 1])
+  assertEvaluatesTo "converts string to int" "\"123\"|int" (VInteger 123)

@@ -5,6 +5,7 @@ import Crossbow.Util
 import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
 import Data.Map.Strict qualified as M
+import Data.String qualified
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
@@ -253,6 +254,7 @@ builtins =
         )
       ),
       ("fanout", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
+      ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
       -- TODO: Flip; needs notion of a lambda first
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
