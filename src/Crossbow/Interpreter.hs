@@ -123,15 +123,15 @@ builtins =
             )
         )
       ),
-      ( "foldl",
+      ( "fold",
         ( Valence 3,
           HSImplIO
-            ( let foldl [acc, _, VList []] = return acc
-                  foldl [acc, VFunction f, VList (x : xs)] = do
+            ( let fold [_, acc, VList []] = return acc
+                  fold d@[VFunction f, acc, VList (x : xs)] = do
                     (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
                     acc' <- fromRight' <$> applyF f' x BindFromLeft
-                    foldl [acc', VFunction f, VList xs]
-               in foldl
+                    fold [VFunction f, acc', VList xs]
+               in fold
             )
         )
       ),
