@@ -218,7 +218,12 @@ builtins =
         )
       ),
       ("sum", (Valence 1, CBImpl (compileUnsafe "fold|+|0"))),
-      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|0"))),
+      -- TODO:
+      -- define head, tail
+      -- need applicative style for lists of functions
+      -- then fold1 using fanout on input to do fold|f|head|tail
+      -- then redefine maximum and minimum in terms of fold1
+      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|-1"))),
       ( "fold",
         ( Valence 3,
           HSImplIO
@@ -231,6 +236,7 @@ builtins =
             )
         )
       ),
+      ("fanout", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
       -- TODO: Flip; needs notion of a lambda first
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),

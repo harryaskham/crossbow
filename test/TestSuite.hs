@@ -49,3 +49,4 @@ main = do
   assertEvaluatesTo "fold over list" "fold | + | 0 | [1,2,3]" (VInteger 6)
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
+  assertEvaluatesTo "fans out" "1 <| fanout | 4" (VList $ VInteger <$> [1, 1, 1, 1])
