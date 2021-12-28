@@ -112,7 +112,6 @@ runWith program ps = do
   where
     go ps (Program []) = return ps
     go ps (Program (c : cs)) = do
-      print (ps, c)
       ps' <- runClause ps c
       go ps' (Program cs)
 

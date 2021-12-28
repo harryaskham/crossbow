@@ -6,7 +6,7 @@ import Data.Text qualified as T
 import System.Console.Haskeline
 
 debug :: Bool
-debug = True
+debug = False
 
 main :: IO ()
 main = runInputT defaultSettings loop
