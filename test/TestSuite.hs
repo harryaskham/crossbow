@@ -51,3 +51,6 @@ main = do
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
   assertEvaluatesTo "fans out" "1 <| fanout | 4" (VList $ VInteger <$> [1, 1, 1, 1])
   assertEvaluatesTo "converts string to int" "\"123\"|int" (VInteger 123)
+  assertEvaluatesTo "drops" "1:10 | 6 drop" (VList $ VInteger <$> [7, 8, 9, 10])
+  assertEvaluatesTo "takes" "1:10 | 3 take" (VList $ VInteger <$> [1, 2, 3])
+  assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)

@@ -44,6 +44,12 @@ isNumeric (VInteger _) = True
 isNumeric (VDouble _) = True
 isNumeric _ = False
 
+truthy :: Value -> Bool
+truthy (VInteger 0) = False
+truthy (VList []) = False
+truthy (VDouble 0.0) = False
+truthy _ = True
+
 castToInt :: Value -> Value
 castToInt v@(VInteger _) = v
 castToInt (VDouble v) = VInteger (round v)

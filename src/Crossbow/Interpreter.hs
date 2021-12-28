@@ -4,6 +4,7 @@ import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
+import Data.List ((!!))
 import Data.Map.Strict qualified as M
 import Data.String qualified
 import Data.Text qualified as T
@@ -143,13 +144,21 @@ apply (VFunction f) v div = fromRight' <$> applyF f v (divToDir div)
 -- If we have a value in program state and encounter a function, apply it
 apply v (VFunction f) div = fromRight' <$> applyF f v (reverseDir $ divToDir div)
 -- Application of lists tries to ziplist
--- TODO: respect divider direction
 apply (VList as@((VFunction _) : _)) (VList bs) div =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
         dir = divToDir div
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
+    return . VList . fmap fromRight' . getZipList $ rs
+-- Fanout values with post-application of applicatives should work the same way
+apply (VList bs) (VList as@((VFunction _) : _)) div =
+  do
+    let unwrap (VFunction f) = f
+        fs = ZipList (unwrap <$> as)
+        bz = ZipList bs
+        dir = reverseDir (divToDir div)
     rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
     return . VList . fmap fromRight' . getZipList $ rs
 
@@ -217,12 +226,22 @@ evalF f@(Function (Operator (OpType t) (Valence v)) args)
   where
     argVals = unbind <$> args
 
+-- Helper to pass through a Haskell function to the builtins
+passthrough2 :: Text -> (Value -> Value -> Value) -> (Text, (Valence, OpImpl))
+passthrough2 name f = (name, (Valence 2, HSImpl (\[a, b] -> f a b)))
+
 builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
-      ("max", (Valence 2, HSImpl (\[a, b] -> max a b))),
-      ("min", (Valence 2, HSImpl (\[a, b] -> min a b))),
+      passthrough2 "max" max,
+      passthrough2 "min" min,
+      -- TODO: Redefine all the below using crossbow folds, maps, filters
+      ("id", (Valence 1, HSImpl (\[a] -> a))),
+      ("drop", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (drop (fromIntegral n) as)))),
+      ("take", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
+      ("head", (Valence 1, HSImpl (\[VList as] -> as !! 0))),
+      ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
       ( "map",
         ( Valence 2,
           HSImplIO
@@ -231,6 +250,19 @@ builtins =
                     x' <- applyF f x BindFromLeft
                     vCons (fromRight' x') <$> map [VFunction f, VList xs]
                in map
+            )
+        )
+      ),
+      ( "filter",
+        ( Valence 2,
+          HSImplIO
+            ( let filter [_, VList []] = return $ VList []
+                  filter [VFunction f, VList (x : xs)] = do
+                    x' <- fromRight' <$> applyF f x BindFromLeft
+                    if truthy x'
+                      then vCons x' <$> filter [VFunction f, VList xs]
+                      else filter [VFunction f, VList xs]
+               in filter
             )
         )
       ),
@@ -254,6 +286,16 @@ builtins =
         )
       ),
       ("fanout", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
+      ( "uncurry2",
+        ( Valence 2,
+          HSImplIO
+            ( \[VFunction f, VList args] -> do
+                (VFunction f') <- fromRight' <$> applyF f (args !! 0) BindFromLeft
+                f'' <- fromRight' <$> applyF f' (args !! 1) BindFromLeft
+                return f''
+            )
+        )
+      ),
       ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
       -- TODO: Flip; needs notion of a lambda first
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
