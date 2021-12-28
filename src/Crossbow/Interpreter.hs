@@ -123,19 +123,31 @@ runClause (ProgramState (Just ps)) (CLValue v div) = ProgramState . Just <$> app
 
 data BindDir = BindFromLeft | BindFromRight
 
+divToDir :: Divider -> BindDir
+divToDir ForwardDiv = BindFromLeft
+divToDir NoDiv = BindFromLeft
+divToDir BackwardDiv = BindFromRight
+
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> Divider -> IO Value
 -- Two functions compose together, if possible
 -- TODO: Disabled to enable map; functions are just objects too...
 -- apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v ForwardDiv = fromRight' <$> applyF f v BindFromLeft
-apply (VFunction f) v NoDiv = fromRight' <$> applyF f v BindFromLeft
-apply (VFunction f) v BackwardDiv = fromRight' <$> applyF f v BindFromRight
+apply (VFunction f) v div = fromRight' <$> applyF f v (divToDir div)
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) ForwardDiv = fromRight' <$> applyF f v BindFromRight
-apply v (VFunction f) NoDiv = fromRight' <$> applyF f v BindFromRight
-apply v (VFunction f) BackwardDiv = fromRight' <$> applyF f v BindFromLeft
+apply v (VFunction f) div = fromRight' <$> applyF f v (divToDir div)
+-- Application of lists tries to ziplist
+-- TODO: respect divider direction
+apply (VList as@((VFunction _) : _)) (VList bs) div =
+  do
+    let unwrap (VFunction f) = f
+        fs = ZipList (unwrap <$> as)
+        bz = ZipList bs
+        dir = divToDir div
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
+    return . VList . fmap fromRight' . getZipList $ rs
+
 -- If we have a value with a value, just override it
 apply _ v _ = return v
 

@@ -121,7 +121,7 @@ instance Pretty Value where
   pretty (VDouble a) = show a
   pretty (VChar a) = show a
   pretty s@(VList a)
-    | isString s = T.pack $ (\(VChar c) -> c) <$> a
+    | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
     | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
 
