@@ -128,6 +128,10 @@ divToDir ForwardDiv = BindFromLeft
 divToDir NoDiv = BindFromLeft
 divToDir BackwardDiv = BindFromRight
 
+reverseDir :: BindDir -> BindDir
+reverseDir BindFromLeft = BindFromRight
+reverseDir BindFromRight = BindFromLeft
+
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> Divider -> IO Value
 -- Two functions compose together, if possible
@@ -136,7 +140,7 @@ apply :: Value -> Value -> Divider -> IO Value
 -- If we have a function in program state, apply to the right
 apply (VFunction f) v div = fromRight' <$> applyF f v (divToDir div)
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) div = fromRight' <$> applyF f v (divToDir div)
+apply v (VFunction f) div = fromRight' <$> applyF f v (reverseDir $ divToDir div)
 -- Application of lists tries to ziplist
 -- TODO: respect divider direction
 apply (VList as@((VFunction _) : _)) (VList bs) div =

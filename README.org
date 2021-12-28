@@ -6,22 +6,20 @@ Solve problems using arrows.
 
 * TODO
 - next
-  - strings + file input
+  - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
 - language features
-  - [ ] builtins defined in terms of the language itself - e.g. map n fold
   - [ ] variable allocation
   - [ ] scoping rules
   - [ ] function definition
   - [ ] predicates, bools and truthiness
-  - [ ] left-partiality e.g 1+ allowed as well as +1
   - [ ] 0, [] and False all falsy???
   - [ ] control flow like splitif? or masking like APL?
-  - [ ] functions applied to functions is just composition
-  - [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
-  - [ ] easy collection literals (e,g, 1 2 3 or 1,2,3) without ambiguity e.g is 1 [1] or 1
   - [ ] Shortcuts for referring to output of previous line / assignment
-  - [ ] text handling
-  - [ ] easy file input
+  - [X] builtins defined in terms of the language itself - e.g. map n fold
+  - [X] left-partiality e.g 1+ allowed as well as +1
+  - [X] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
+  - [X] text handling
+  - [X] easy file input
   - [X] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
   - [X] explicit casting
   - [X] function values
