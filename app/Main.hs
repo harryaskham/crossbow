@@ -1,7 +1,6 @@
 module Main where
 
 import Crossbow.Interpreter
-import Crossbow.Parser
 import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline

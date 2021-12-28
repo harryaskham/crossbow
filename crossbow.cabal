@@ -85,7 +85,6 @@ library
     import:             common-settings
     hs-source-dirs:     src
     exposed-modules:    Crossbow.Types,
-                        Crossbow.Parser,
                         Crossbow.Util,
                         Crossbow.Interpreter
 
@@ -95,7 +94,6 @@ executable crossbow
     hs-source-dirs:     app,
                         src
     other-modules:      Crossbow.Types,
-                        Crossbow.Parser,
                         Crossbow.Util,
                         Crossbow.Interpreter
 
@@ -106,7 +104,6 @@ Test-Suite projectname-testsuite
     hs-source-dirs:     test
                         src
     other-modules:      Crossbow.Types,
-                        Crossbow.Parser,
                         Crossbow.Util,
                         Crossbow.Interpreter
     build-depends:      QuickCheck,
