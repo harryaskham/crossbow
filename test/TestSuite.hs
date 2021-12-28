@@ -8,6 +8,7 @@ import Test.HUnit (assertEqual, assertFailure)
 
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg program expected = do
+  print msg
   case compile program of
     Left e -> assertFailure (T.unpack msg <> show e)
     Right p -> do
@@ -43,13 +44,12 @@ main = do
   assertEvaluatesTo "read file" "read \"test/test_input.txt\"" (VList $ VChar <$> T.unpack "test\ninput\n")
   assertEvaluatesTo "map over empty list" "map|+1|[]" (VList [])
   assertEvaluatesTo "map over list" "map|+1|[1,2,3]" (VList $ VInteger <$> [2, 3, 4])
-  assertEvaluatesTo "map forward over list" "map <| +1 | [1,2,3]" (VList $ VInteger <$> [2, 3, 4])
   assertEvaluatesTo "map forward over list" "[1,2,3] | map | +1" (VList $ VInteger <$> [2, 3, 4])
   assertEvaluatesTo "fold over empty list" "fold | + | 0 | []" (VInteger 0)
   assertEvaluatesTo "fold over list" "fold | + | 0 | [1,2,3]" (VInteger 6)
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
-  assertEvaluatesTo "fans out" "1 <| fanout | 4" (VList $ VInteger <$> [1, 1, 1, 1])
+  assertEvaluatesTo "fans out" "fanout 1 | 4" (VList $ VInteger <$> [1, 1, 1, 1])
   assertEvaluatesTo "converts string to int" "\"123\"|int" (VInteger 123)
   assertEvaluatesTo "drops" "1:10 | 6 drop" (VList $ VInteger <$> [7, 8, 9, 10])
   assertEvaluatesTo "takes" "1:10 | 3 take" (VList $ VInteger <$> [1, 2, 3])
