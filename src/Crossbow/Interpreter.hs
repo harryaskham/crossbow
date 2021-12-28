@@ -82,10 +82,6 @@ unbind :: Argument -> Value
 unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
-implementation :: OpType -> OpImpl
-implementation (OpType "+") = HSImpl (\[a, b] -> a <> b)
-implementation (OpType o) = error $ "Unsupported op: " <> o
-
 evalF :: Function -> Either EvalError Value
 evalF f@(Function (Operator (OpType t) (Valence v)) args)
   | not (null $ getUnbound f) = Left $ EvalError "Can't evaluate with unbound variables"

@@ -34,3 +34,5 @@ main = do
   assertEvaluatesTo "list addition" "[1,2,3]|+10" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "reverse list addition" "10|+[1,2,3]" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)
+  assertEvaluatesTo "min" "min 10 20" (VInteger 10)
+  assertEvaluatesTo "max" "max 10 20" (VInteger 20)
