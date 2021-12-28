@@ -92,14 +92,15 @@ mkFuncR o@(Operator _ (Valence v)) args
 
 operator :: P Operator
 operator = ignoreSpaces $ do
-  k <- T.pack <$> firstOf (string . T.unpack <$> M.keys builtins)
+  -- We parse in favour of longer names first to avoid max/maximum clashes
+  k <- T.pack <$> firstOf (string . T.unpack <$> (sortOn (Down . T.length) (M.keys builtins)))
   let (v, _) = builtins M.! k
   return $ Operator (OpType k) v
 
 -- TODO: Re-split parser and interpreter; below here is interpreter, above is parser
 
 -- TODO: Expand to include all kinds of things like arrow branching, etc
-data ProgramState = ProgramState (Maybe Value)
+data ProgramState = ProgramState (Maybe Value) deriving (Show)
 
 run :: Program -> IO (Maybe Value)
 run program = runWith program (ProgramState Nothing)
@@ -111,6 +112,7 @@ runWith program ps = do
   where
     go ps (Program []) = return ps
     go ps (Program (c : cs)) = do
+      print (ps, c)
       ps' <- runClause ps c
       go ps' (Program cs)
 
