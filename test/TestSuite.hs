@@ -47,3 +47,4 @@ main = do
   assertEvaluatesTo "map forward over list" "[1,2,3] | map | +1" (VList $ VInteger <$> [2, 3, 4])
   assertEvaluatesTo "fold over empty list" "fold | + | 0 | []" (VInteger 0)
   assertEvaluatesTo "fold over list" "fold | + | 0 | [1,2,3]" (VInteger 6)
+  assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
