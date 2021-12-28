@@ -40,7 +40,7 @@ instance Ord Value where
   a@(VDouble _) <= b@(VInteger _) = a <= castToDouble b
   (VList []) <= (VList []) = True
   (VList (a : as)) <= (VList (b : bs))
-    | a == b = VList as <= VList bs
+    | castToDouble a == castToDouble b = VList as <= VList bs
     | otherwise = a <= b
   a <= (VList bs)
     | isNumeric a = all (castToDouble a <=) bs
@@ -90,7 +90,9 @@ builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
       ("max", (Valence 2, HSImpl (\[a, b] -> max a b))),
-      ("min", (Valence 2, HSImpl (\[a, b] -> min a b)))
+      ("min", (Valence 2, HSImpl (\[a, b] -> min a b))),
+      ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
+      ("double", (Valence 1, HSImpl (\[a] -> castToDouble a)))
     ]
 
 implementation :: OpType -> OpImpl

@@ -36,3 +36,7 @@ main = do
   assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)
   assertEvaluatesTo "min" "min 10 20" (VInteger 10)
   assertEvaluatesTo "max" "max 10 20" (VInteger 20)
+  assertEvaluatesTo "cast to int" "2.2|int" (VInteger 2)
+  assertEvaluatesTo "cast list to int" "[2.2, 3.4]|int" (VList $ VInteger <$> [2, 3])
+  assertEvaluatesTo "cast to double" "2|double" (VDouble 2.0)
+  assertEvaluatesTo "cast list to double" "[2, 3]|double" (VList $ VDouble <$> [2.0, 3.0])

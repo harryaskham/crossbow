@@ -6,7 +6,7 @@ Solve problems with arrows.
 
 * TODO
 - next
-  - file input
+  - strings + file input
 - language features
   - [ ] builtins defined in terms of the language itself - e.g. map n fold
   - [ ] variable allocation
@@ -16,17 +16,17 @@ Solve problems with arrows.
   - [ ] left-partiality e.g 1+ allowed as well as +1
   - [ ] 0, [] and False all falsy???
   - [ ] control flow like splitif? or masking like APL?
-  - [ ] function values
   - [ ] functions applied to functions is just composition
   - [ ] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
-  - [X] Pipe one thing to another
   - [ ] easy collection literals (e,g, 1 2 3 or 1,2,3) without ambiguity e.g is 1 [1] or 1
   - [ ] Shortcuts for referring to output of previous line / assignment
-  - [ ] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
+  - [X] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
   - [ ] explicit casting
   - [ ] text handling
   - [ ] easy file input
   - [ ] if no file input, assume dealing with STDIN?
+  - [X] function values
+  - [X] Pipe one thing to another
   - [X] Basic arithmetic
   - [X] Single pipes
 - ui features
