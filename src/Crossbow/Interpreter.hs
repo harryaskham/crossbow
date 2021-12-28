@@ -44,7 +44,7 @@ clause :: P Clause
 clause = CLValue <$> value <*> clauseDivider
 
 value :: P Value
-value = firstOf [vRange, vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
+value = firstOf [vRange, vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString, vBool]
   where
     vNumber = do
       x <- T.pack <$> ignoreSpaces (many1 (oneOf "-.0123456789"))
@@ -54,6 +54,7 @@ value = firstOf [vRange, vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
     vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
+    vBool = VBool <$> ((string "False" *> return False) <|> (string "True" *> return True))
     vRange = do
       VInteger a <- ignoreSpaces (castToInt <$> vNumber)
       ignoreSpaces (string ":")
