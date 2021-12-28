@@ -34,16 +34,16 @@ clause :: P Clause
 clause = clValue
 
 value :: P Value
-value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar]
+value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString]
   where
-    vNumber :: P Value
     vNumber = do
       x <- T.pack <$> ignoreSpaces (many1 (oneOf "-.0123456789"))
       if "." `T.isInfixOf` x
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
-    vList = VList <$> between (char '[') (char ']') (value `sepBy1` char ',')
+    vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
+    vString = VList <$> between (char '"') (char '"') (many (VChar <$> anyChar))
     -- If this function is already fully bound, reduce it down to a value
     maybeApply f
       | null (getUnbound f) = fromRight' (evalF f)
