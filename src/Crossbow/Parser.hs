@@ -32,7 +32,7 @@ clause :: P Clause
 clause = clValue
 
 value :: P Value
-value = firstOf [vList, vNumber, vFunc]
+value = firstOf [vFuncL, vFuncR, vFunc, vList, vNumber]
   where
     vNumber :: P Value
     vNumber = do
@@ -41,17 +41,32 @@ value = firstOf [vList, vNumber, vFunc]
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
     vList = VList <$> between (char '[') (char ']') (value `sepBy1` char ',')
-    vFunc = VFunction . fromRight' <$> (mkFunc <$> operator <*> many value)
+    vFuncR = VFunction . fromRight' <$> (mkFuncR <$> operator <*> many1 value)
+    vLiteral = firstOf [vList, vNumber]
+    -- Only allow literal partial right application to avoid infinite parsing
+    vFuncL = VFunction . fromRight' <$> (flip mkFuncL <$> many1 vLiteral <*> operator)
+    vFunc = VFunction . mkFunc <$> operator
 
 data ArgNumError = ArgNumError
 
-mkFunc :: Operator -> [Value] -> Either ArgNumError Function
-mkFunc o@(Operator _ (Valence v)) args
+mkFunc :: Operator -> Function
+mkFunc o@(Operator _ (Valence v)) = Function o (replicate v Unbound)
+
+mkFuncL :: Operator -> [Value] -> Either ArgNumError Function
+mkFuncL o@(Operator _ (Valence v)) args
   | length args > v = Left ArgNumError
   | otherwise =
     let unbound = replicate (v - length args) Unbound
         bound = Bound <$> args
      in Right $ Function o (bound ++ unbound)
+
+mkFuncR :: Operator -> [Value] -> Either ArgNumError Function
+mkFuncR o@(Operator _ (Valence v)) args
+  | length args > v = Left ArgNumError
+  | otherwise =
+    let unbound = replicate (v - length args) Unbound
+        bound = Bound <$> args
+     in Right $ Function o (unbound ++ bound)
 
 operator :: P Operator
 operator = ignoreSpaces $ char '+' >> return (Operator OPAdd (Valence 2))

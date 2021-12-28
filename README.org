@@ -13,6 +13,7 @@ Solve problems with arrows.
   - [ ] scoping rules
   - [ ] function definition
   - [ ] predicates, bools and truthiness
+  - [ ] left-partiality e.g 1+ allowed as well as +1
   - [ ] 0, [] and False all falsy???
   - [ ] control flow like splitif? or masking like APL?
   - [ ] function values

@@ -20,35 +20,44 @@ runClause (ProgramState Nothing) (CLValue v) = ProgramState $ Just v
 -- Running a function on state applies it
 runClause (ProgramState (Just ps)) (CLValue v) = ProgramState $ Just (apply ps v)
 
+data BindDir = BindFromLeft | BindFromRight
+
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> Value
 -- Two functions compose together, if possible
 apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v = fromRight' $ applyF f v
+apply (VFunction f) v = fromRight' $ applyF f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) = fromRight' $ applyF f v
+apply v (VFunction f) = fromRight' $ applyF f v BindFromRight
 -- If we have a value with a value, just override it
 apply _ v = v
 
 data ApplyValenceError = ApplyValenceError
 
 -- Binds the next unbound value to that given
-bindNext :: Function -> Value -> Function
-bindNext (Function op args) v = Function op (bound ++ ((Bound v) : replicate numUnbound Unbound))
+bindNext :: Function -> Value -> BindDir -> Function
+bindNext f@(Function op args) v bindDir =
+  case bindDir of
+    BindFromLeft -> Function op (reverse . fst $ foldl' bindArg ([], False) args)
+    BindFromRight -> Function op (fst $ foldr (flip bindArg) ([], False) args)
   where
-    bound = takeWhile (/= Unbound) args
-    numUnbound = length args - length bound - 1
+    bindArg (args, True) a = (a : args, True)
+    bindArg (args, False) a@(Bound _) = (a : args, False)
+    bindArg (args, False) Unbound = (Bound v : args, True)
 
 getUnbound :: Function -> [Argument]
 getUnbound (Function _ args) = filter (== Unbound) args
 
+getBound :: Function -> [Argument]
+getBound (Function _ args) = filter (/= Unbound) args
+
 -- Either partially bind this value, or if it's fully applied, evaluate it down
-applyF :: Function -> Value -> Either ApplyValenceError Value
-applyF f value
+applyF :: Function -> Value -> BindDir -> Either ApplyValenceError Value
+applyF f value bindDir
   | null unbound = Left ApplyValenceError
-  | length unbound == 1 = Right (fromRight' $ evalF (bindNext f value))
-  | length unbound > 1 = Right (VFunction $ bindNext f value)
+  | length unbound == 1 = Right (fromRight' $ evalF (bindNext f value bindDir))
+  | length unbound > 1 = Right (VFunction $ bindNext f value bindDir)
   where
     unbound = getUnbound f
 
