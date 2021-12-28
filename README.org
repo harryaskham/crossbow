@@ -7,7 +7,7 @@ Solve problems using arrows.
 * TODO
 - next
   - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
-  - bools, filter, subtraction, length, then can solve AOC
+  - Seriously rework the pass-forward semantics; pick one semantics and make it work rather than current situation where lots of unsound approaches work
 - language features
   - [ ] variable allocation
   - [ ] scoping rules

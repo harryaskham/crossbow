@@ -54,3 +54,5 @@ main = do
   assertEvaluatesTo "drops" "1:10 | 6 drop" (VList $ VInteger <$> [7, 8, 9, 10])
   assertEvaluatesTo "takes" "1:10 | 3 take" (VList $ VInteger <$> [1, 2, 3])
   assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
+  assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
+  assertEvaluatesTo "filter" "filter | <10 | 8:12" (VList $ VInteger <$> [8, 9])

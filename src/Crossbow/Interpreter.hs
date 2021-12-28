@@ -234,10 +234,15 @@ builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
+      ("<=", (Valence 2, HSImpl (\[a, b] -> VBool $ a <= b))),
+      ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
+      (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),
+      (">", (Valence 2, HSImpl (\[a, b] -> VBool $ a > b))),
       passthrough2 "max" max,
       passthrough2 "min" min,
       -- TODO: Redefine all the below using crossbow folds, maps, filters
       ("id", (Valence 1, HSImpl (\[a] -> a))),
+      ("const", (Valence 2, HSImpl (\[a, _] -> a))),
       ("drop", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (drop (fromIntegral n) as)))),
       ("take", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
       ("head", (Valence 1, HSImpl (\[VList as] -> as !! 0))),
@@ -260,7 +265,7 @@ builtins =
                   filter [VFunction f, VList (x : xs)] = do
                     x' <- fromRight' <$> applyF f x BindFromLeft
                     if truthy x'
-                      then vCons x' <$> filter [VFunction f, VList xs]
+                      then vCons x <$> filter [VFunction f, VList xs]
                       else filter [VFunction f, VList xs]
                in filter
             )

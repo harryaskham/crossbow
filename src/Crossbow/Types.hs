@@ -9,6 +9,7 @@ import Data.Text.Read qualified as TR
 data Value
   = VInteger Integer
   | VDouble Double
+  | VBool Bool
   | VChar Char
   | VList [Value]
   | VFunction Function
@@ -35,6 +36,7 @@ vCons _ _ = error "Invalid cons"
 asText :: Value -> Text
 asText (VInteger a) = show a
 asText (VDouble a) = show a
+asText (VBool a) = show a
 asText (VChar a) = T.pack [a]
 asText (VList as) = mconcat (asText <$> as)
 asText (VFunction _) = error "Can't coerce function to text"
@@ -45,6 +47,7 @@ isNumeric (VDouble _) = True
 isNumeric _ = False
 
 truthy :: Value -> Bool
+truthy (VBool b) = b
 truthy (VInteger 0) = False
 truthy (VList []) = False
 truthy (VDouble 0.0) = False
@@ -59,6 +62,7 @@ castToInt v@(VList vs)
     VInteger (readOne (TR.signed TR.decimal) (asText v))
   | otherwise = VList (castToInt <$> vs)
 castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
+castToInt (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
 
 castToDouble :: Value -> Value
 castToDouble v@(VDouble _) = v
@@ -66,6 +70,7 @@ castToDouble (VInteger v) = VDouble (fromIntegral v)
 castToDouble (VChar v) = VDouble (fromIntegral $ ord v)
 castToDouble (VList vs) = VList (castToDouble <$> vs)
 castToDouble f@(VFunction _) = f -- TODO: Compose casting with the given f
+castToDouble (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
 
 castToChar :: Value -> Value
 castToChar v@(VChar _) = v
@@ -73,6 +78,7 @@ castToChar (VInteger v) = VChar (chr (fromIntegral v))
 castToChar (VDouble v) = VChar (chr $ round v)
 castToChar (VList vs) = VList (castToChar <$> vs)
 castToChar f@(VFunction _) = f -- TODO: Compose casting with the given f
+castToChar (VBool b) = VChar (chr $ fromEnum b)
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
@@ -129,6 +135,7 @@ instance Pretty Value where
   pretty (VInteger a) = show a
   pretty (VDouble a) = show a
   pretty (VChar a) = show a
+  pretty (VBool a) = show a
   pretty s@(VList a)
     | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
     | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
