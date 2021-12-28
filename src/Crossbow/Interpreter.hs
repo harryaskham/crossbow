@@ -217,12 +217,12 @@ builtins =
         )
       ),
       ("sum", (Valence 1, CBImpl (compileUnsafe "fold|+|0"))),
-      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold max 0"))),
+      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|0"))),
       ( "fold",
         ( Valence 3,
           HSImplIO
             ( let fold [_, acc, VList []] = return acc
-                  fold d@[VFunction f, acc, VList (x : xs)] = do
+                  fold [VFunction f, acc, VList (x : xs)] = do
                     (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
                     acc' <- fromRight' <$> applyF f' x BindFromLeft
                     fold [VFunction f, acc', VList xs]
