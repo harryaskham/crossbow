@@ -100,6 +100,7 @@ value =
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
     vBool = VBool <$> ((string "False" $> False) <|> (string "True" $> True))
+    -- TODO: Ranges can also be over variables
     vRange = do
       VInteger a <- ignoreSpaces (castToInt <$> vNumber)
       ignoreSpaces (string ":")
@@ -328,6 +329,8 @@ builtins =
       ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
       (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),
       (">", (Valence 2, HSImpl (\[a, b] -> VBool $ a > b))),
+      (":", (Valence 2, HSImpl (\[a, b] -> vCons a b))),
+      ("cons", (Valence 2, HSImpl (\[a, b] -> vCons a b))),
       passthrough2 "max" max,
       passthrough2 "min" min,
       -- TODO: Redefine all the below using crossbow folds, maps, filters
@@ -438,7 +441,6 @@ builtins =
             )
         )
       ),
-      ("cons", (Valence 2, HSImpl (\[a, as] -> vCons a as))),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
