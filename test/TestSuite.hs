@@ -24,6 +24,7 @@ main = do
   assertEvaluatesTo "positive double" "1.4" (VDouble 1.4)
   assertEvaluatesTo "negative double" "(-1.4)" (VDouble (-1.4))
   assertEvaluatesTo "addition" "1|+_2" (VInteger 3)
+  assertEvaluatesTo "multiplication" "2|(_*4)" (VInteger 8)
   assertEvaluatesTo "double addition" "1.0|+_2.0" (VDouble 3.0)
   assertEvaluatesTo "int/double addition" "1|+_2.0" (VDouble 3.0)
   assertEvaluatesTo "addition with spaces" "    1 |   +     2  " (VInteger 3)

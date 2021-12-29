@@ -1,6 +1,10 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Lambdas
+    - args as list (monadic)
+    - args as variadic
+  - [ ] Sliding windows
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'
       - Interpreter.hs

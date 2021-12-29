@@ -279,6 +279,7 @@ builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
+      ("*", (Valence 2, HSImpl (\[a, b] -> a * b))),
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
       ("<=", (Valence 2, HSImpl (\[a, b] -> VBool $ a <= b))),
       ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
@@ -390,6 +391,19 @@ builtins =
             )
         )
       ),
+      ("cons", (Valence 2, HSImpl (\[a, as] -> vCons a as))),
+      -- TODO: Make flip work with other valences
+      ( "flip",
+        ( Valence 3,
+          HSImplIO
+            ( \[VFunction f, a, b] ->
+                do
+                  (VFunction f') <- fromRight' <$> applyF f b BindFromLeft
+                  fromRight' <$> applyF f' a BindFromLeft
+            )
+        )
+      ),
+      ("reverse", (Valence 1, CBImpl (compileUnsafe "foldl (flip cons) [] _"))),
       ( "ap",
         ( Valence 2,
           HSImplIO
