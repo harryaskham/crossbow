@@ -41,36 +41,32 @@ firstOf = foldl1 (<|>) . fmap try
 ignoreSpaces :: P a -> P a
 ignoreSpaces p = spaces *> p <* spaces
 
-clauseDivider :: P Divider
-clauseDivider =
-  ignoreSpaces $
-    (char '|' >> return ForwardDiv)
-      <|> (string "<|" >> return BackwardDiv)
-      <|> return NoDiv
+clauseDivider :: P Char
+clauseDivider = ignoreSpaces (char '|')
 
 -- vProgram lets us parse an entire program with application
 -- TODO: Use this and do away with clases entirely
 vProgram :: P (IO Value)
 vProgram = do
-  ((CLValue c ForwardDiv) : clauses) <- many1 clause
+  ((CLValue c) : clauses) <- clause `sepBy1` clauseDivider
   return $
     foldl'
-      ( \v c -> do
-          v' <- v
-          runClauseV v' c
+      ( \vIO c -> do
+          v <- vIO
+          runClauseV v c
       )
       (pure c)
       clauses
 
 program :: P Program
-program = Program <$> many clause
+program = Program <$> (clause `sepBy` clauseDivider)
 
 --program = do
 --  p <- vProgram
 --  return $ Program [CLValue p NoDiv]
 
 clause :: P Clause
-clause = CLValue <$> value <*> clauseDivider
+clause = CLValue <$> value
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
@@ -204,54 +200,43 @@ runWith program ps = do
 
 runClause :: ProgramState -> Clause -> IO ProgramState
 -- If we're running a function / defining a constant on no state, whatever this is becomes the state
-runClause (ProgramState Nothing) (CLValue v _) = return . ProgramState $ Just v
+runClause (ProgramState Nothing) (CLValue v) = return . ProgramState $ Just v
 -- Running a function on state applies it
-runClause (ProgramState (Just ps)) (CLValue v div) = ProgramState . Just <$> apply ps v div
+runClause (ProgramState (Just ps)) (CLValue v) = ProgramState . Just <$> apply ps v
 
 runClauseV :: Value -> Clause -> IO Value
-runClauseV a (CLValue b div) = apply a b div
+runClauseV a (CLValue b) = apply a b
 
 data BindDir = BindFromLeft | BindFromRight
 
-divToDir :: Divider -> BindDir
-divToDir ForwardDiv = BindFromLeft
-divToDir NoDiv = BindFromLeft
-divToDir BackwardDiv = BindFromRight
-
-reverseDir :: BindDir -> BindDir
-reverseDir BindFromLeft = BindFromRight
-reverseDir BindFromRight = BindFromLeft
-
 -- Apply the second value to the first in left-to-right fashion.
-apply :: Value -> Value -> Divider -> IO Value
+apply :: Value -> Value -> IO Value
 -- Two functions compose together, if possible
 -- TODO: Disabled to enable map; functions are just objects too...
 -- apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v div = fromRight' <$> applyF f v (divToDir div)
+apply (VFunction f) v = fromRight' <$> applyF f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) div = fromRight' <$> applyF f v (reverseDir $ divToDir div)
+apply v (VFunction f) = fromRight' <$> applyF f v BindFromRight
 -- Application of lists tries to ziplist
-apply (VList as@((VFunction _) : _)) (VList bs) div =
+apply (VList as@((VFunction _) : _)) (VList bs) =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-        dir = divToDir div
-    rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromLeft
     return . VList . fmap fromRight' . getZipList $ rs
 -- Fork values with post-application of applicatives should work the same way
-apply (VList bs) (VList as@((VFunction _) : _)) div =
+apply (VList bs) (VList as@((VFunction _) : _)) =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-        dir = reverseDir (divToDir div)
-    rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromRight
     return . VList . fmap fromRight' . getZipList $ rs
 
 -- If we have a value with a value, just override it
-apply _ v _ = return v
+apply _ v = return v
 
 data ApplyValenceError = ApplyValenceError
 

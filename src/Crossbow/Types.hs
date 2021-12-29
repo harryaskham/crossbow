@@ -161,9 +161,7 @@ data OpImpl
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
 
-data Clause = CLValue Value Divider deriving (Show, Eq)
-
-data Divider = ForwardDiv | BackwardDiv | NoDiv deriving (Show, Eq)
+data Clause = CLValue Value deriving (Show, Eq)
 
 data Program = Program [Clause] deriving (Show, Eq)
 
