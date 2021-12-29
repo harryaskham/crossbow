@@ -67,6 +67,7 @@ main = do
   assertEvaluatesTo "empty list length" "length []" (VInteger 0)
   assertEvaluatesTo "scanl" "scanl (+) 0 [1,2,3]" (VList $ VInteger <$> [0, 1, 3, 6])
   assertEvaluatesTo "scanr" "scanr (+) 0 [1,2,3]" (VList $ VInteger <$> [6, 5, 3, 0])
+  assertEvaluatesTo "fork and ap" "6 | fork 2 | [+,+1] | monadic ap" (VInteger 13)
 
   assertEvaluatesTo
     "Day 1 (Part 1)"

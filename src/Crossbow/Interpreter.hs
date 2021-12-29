@@ -390,6 +390,14 @@ builtins =
             )
         )
       ),
+      ( "ap",
+        ( Valence 2,
+          HSImplIO
+            ( \[VFunction f, a] ->
+                fromRight' <$> applyF f a BindFromLeft
+            )
+        )
+      ),
       ("fork", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
       ( "monadic",
         ( Valence 2,
