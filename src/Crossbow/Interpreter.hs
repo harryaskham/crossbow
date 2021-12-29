@@ -12,6 +12,7 @@ import Data.String qualified
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
+import Data.Vector.Fusion.Stream.Monadic (foldl1M')
 import GHC.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
@@ -47,8 +48,26 @@ clauseDivider =
       <|> (string "<|" >> return BackwardDiv)
       <|> return NoDiv
 
+-- vProgram lets us parse an entire program with application
+-- TODO: Use this and do away with clases entirely
+vProgram :: P (IO Value)
+vProgram = do
+  ((CLValue c ForwardDiv) : clauses) <- many1 clause
+  return $
+    foldl'
+      ( \v c -> do
+          v' <- v
+          runClauseV v' c
+      )
+      (pure c)
+      clauses
+
 program :: P Program
 program = Program <$> many clause
+
+--program = do
+--  p <- vProgram
+--  return $ Program [CLValue p NoDiv]
 
 clause :: P Clause
 clause = CLValue <$> value <*> clauseDivider
@@ -62,6 +81,7 @@ value =
     [ vRange,
       vNumber,
       inParens value,
+      vLambda,
       vFunction,
       vList,
       vChar,
@@ -127,6 +147,22 @@ value =
           vFuncBin,
           vFunc
         ]
+    vLambda = do
+      char '{'
+      fIO <- vProgram
+      char '}'
+      return $
+        VFunction
+          ( Function
+              Nothing
+              ( HSImplIO
+                  ( \[a] -> do
+                      (VFunction f) <- fIO
+                      fromRight' <$> applyF f a BindFromLeft
+                  )
+              )
+              [Unbound]
+          )
 
 mkFunc :: Operator -> Function
 mkFunc (Operator (OpType t) (Valence v)) =
@@ -171,6 +207,9 @@ runClause :: ProgramState -> Clause -> IO ProgramState
 runClause (ProgramState Nothing) (CLValue v _) = return . ProgramState $ Just v
 -- Running a function on state applies it
 runClause (ProgramState (Just ps)) (CLValue v div) = ProgramState . Just <$> apply ps v div
+
+runClauseV :: Value -> Clause -> IO Value
+runClauseV a (CLValue b div) = apply a b div
 
 data BindDir = BindFromLeft | BindFromRight
 
