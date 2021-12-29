@@ -2,7 +2,8 @@
 
 - Do Next
   - [ ] STOP HARDCODING 1-lAMBDAS
-  - [ ] Start with unnamed lambda args like $0, $1
+  - [ ] Issue is we don't seem to be substituting, so we aren't reducing as we go
+  - [X] Start with unnamed lambda args like $0, $1
     - need to terminate when eval'ing Identifier
     - only eval resume after subbing
   - [X] Unify functions and programs; | is just the ap function

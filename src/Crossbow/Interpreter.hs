@@ -13,7 +13,7 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector.Fusion.Stream.Monadic (foldl1M')
-import GHC.IO.Unsafe (unsafePerformIO)
+import GHC.IO.Unsafe (unsafeInterleaveIO, unsafePerformIO)
 import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
 import Prelude hiding (optional)
@@ -44,18 +44,24 @@ ignoreSpaces p = spaces *> p <* spaces
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
+clauses :: P [IO Value]
+clauses = (pure <$> value) `sepBy1` clauseDivider
+
+runClauses :: [IO Value] -> IO Value
+runClauses (c : cs) = do
+  foldl'
+    ( \vIO cIO -> do
+        v <- vIO
+        c <- cIO
+        apply v c
+    )
+    c
+    cs
+
 program :: P (IO Value)
 program = do
-  (c : clauses) <- (pure <$> value) `sepBy1` clauseDivider
-  return $
-    foldl'
-      ( \vIO cIO -> do
-          v <- vIO
-          c <- cIO
-          apply v c
-      )
-      c
-      clauses
+  cs <- clauses
+  return $ runClauses cs
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
@@ -141,7 +147,7 @@ value =
     -- TODO: Lambdas of more than one variable
     vLambda = do
       char '{'
-      bodyIO <- program
+      cs <- clauses
       char '}'
       return $
         VFunction
@@ -149,11 +155,9 @@ value =
               Nothing
               ( HSImplIO
                   ( \args -> do
-                      body <- bodyIO
-                      rE <- evalWithContext args body
-                      case rE of
-                        Left e -> error (show e)
-                        Right r -> return r
+                      print "running lambda"
+                      let cs' = substituteArgs args <$> cs
+                      runClauses cs'
                   )
               )
               [Unbound] -- TODO: THIS ONLY ALLOWS 1-LAMBDAS
@@ -195,7 +199,11 @@ apply :: Value -> Value -> IO Value
 -- TODO: Disabled to enable map; functions are just objects too...
 -- apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v = fromRight' <$> applyF f v BindFromLeft
+apply (VFunction f) v = do
+  r <- applyF f v BindFromLeft
+  case r of
+    Left e -> error (show e)
+    Right r -> return r
 -- If we have a value in program state and encounter a function, apply it
 apply v (VFunction f) = fromRight' <$> applyF f v BindFromRight
 -- Application of lists tries to ziplist
@@ -218,7 +226,7 @@ apply (VList bs) (VList as@((VFunction _) : _)) =
 -- If we have a value with a value, just override it
 apply _ v = return v
 
-data ApplyValenceError = ApplyValenceError
+data ApplyValenceError = ApplyValenceError deriving (Show)
 
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
@@ -240,13 +248,13 @@ getBound (Function _ _ args) = filter (/= Unbound) args
 -- Either partially bind this value, or if it's fully applied, evaluate it down
 applyF :: Function -> Value -> BindDir -> IO (Either ApplyValenceError Value)
 applyF f value bindDir
-  | null unbound = return $ Left ApplyValenceError
   | length unbound == 1 = do
     resultE <- evalF (VFunction (bindNext f value bindDir))
     return $ Right (fromRight' resultE)
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
+  | null unbound = return $ Left ApplyValenceError
   where
-    unbound = getUnbound f
+    unbound = traceShow (f, value) $ getUnbound f
 
 data CrossbowEvalError = EvalError Text deriving (Show)
 
@@ -281,21 +289,24 @@ evalF v = return $ Right v
 identifierIx :: Value -> Int
 identifierIx (VIdentifier i) = readOne decimal (T.drop 1 i)
 
-substituteArgs :: [Value] -> Value -> Value
-substituteArgs subs i@(VIdentifier _) = subs !! identifierIx i
--- Get e.g. the 4th arg for $3
-substituteArgs subs (VList as) = VList (substituteArgs subs <$> as)
-substituteArgs subs (VFunction (Function n impl args)) =
-  VFunction (Function n impl (substituteBoundArg subs <$> args))
+substituteArgs :: [Value] -> IO Value -> IO Value
+substituteArgs subs vIO = do
+  v <- vIO
+  case v of
+    i@(VIdentifier _) -> return $ subs !! identifierIx i
+    (VList as) -> VList <$> sequence (substituteArgs subs . pure <$> as)
+    (VFunction (Function n impl args)) -> do
+      args' <- traverse (substituteBoundArg subs) args
+      return $ VFunction (Function n impl args')
+    _ -> return v
   where
-    substituteBoundArg _ Unbound = Unbound
-    substituteBoundArg subs (Bound v) = Bound (substituteArgs subs v)
-substituteArgs _ v = v
+    substituteBoundArg _ Unbound = return Unbound
+    substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
 
 -- Evaluate the given value (probably a lambda) after substituting identifiers
 -- TODO: Only subs, needs to eval still
 evalWithContext :: [Value] -> Value -> IO (Either CrossbowEvalError Value)
-evalWithContext args v = evalF $ substituteArgs args v
+evalWithContext args v = evalF =<< substituteArgs args (pure v)
 
 -- Helper to pass through a Haskell function to the builtins
 passthrough2 :: Text -> (Value -> Value -> Value) -> (Text, (Valence, OpImpl))
