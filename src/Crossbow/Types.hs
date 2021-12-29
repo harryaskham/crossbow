@@ -6,6 +6,7 @@ import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read qualified as TR
 import Data.Tuple.Extra (both)
+import Text.Show (showsPrec)
 
 data Value
   = VInteger Integer
@@ -140,7 +141,14 @@ instance Ord Value where
 
 data Argument = Unbound | Bound Value deriving (Show, Eq)
 
-data Function = Function Operator [Argument] deriving (Show, Eq)
+data Function = Function (Maybe Text) OpImpl [Argument]
+
+instance Show Function where
+  showsPrec i (Function (Just n) _ args) = showsPrec i (n, args)
+  showsPrec i (Function Nothing _ args) = showsPrec i ("<function>", args)
+
+instance Eq Function where
+  (==) = error "Function equality"
 
 data OpType = OpType Text deriving (Show, Eq)
 
@@ -181,8 +189,9 @@ instance Pretty Value where
   pretty (VFunction f) = pretty f
 
 instance Pretty Function where
-  pretty (Function (Operator opType _) args) =
-    "(" <> pretty opType <> " " <> T.intercalate "," (pretty <$> args) <> ")"
+  pretty (Function name _ args) =
+    let n = fromMaybe "<function>" name
+     in "(" <> n <> " " <> T.intercalate "," (pretty <$> args) <> ")"
 
 instance Pretty Argument where
   pretty Unbound = "_"

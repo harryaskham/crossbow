@@ -129,13 +129,17 @@ value =
         ]
 
 mkFunc :: Operator -> Function
-mkFunc o@(Operator _ (Valence v)) = Function o (replicate v Unbound)
+mkFunc (Operator (OpType t) (Valence v)) =
+  let (_, impl) = builtins M.! t
+   in Function (Just t) impl (replicate v Unbound)
 
 mkFuncL :: Operator -> [Argument] -> Either CrossbowParseError Function
-mkFuncL o@(Operator _ (Valence v)) args
+mkFuncL (Operator (OpType t) (Valence v)) args
   | length args > v = Left ArgNumError
-  | length args < v = Right $ Function o (args ++ replicate (v - length args) Unbound)
-  | otherwise = Right $ Function o args
+  | length args < v = Right $ Function (Just t) impl (args ++ replicate (v - length args) Unbound)
+  | otherwise = Right $ Function (Just t) impl args
+  where
+    (_, impl) = builtins M.! t
 
 operator :: P Operator
 operator = ignoreSpaces $ do
@@ -214,20 +218,20 @@ data ApplyValenceError = ApplyValenceError
 
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
-bindNext f@(Function op args) v bindDir =
+bindNext f@(Function t impl args) v bindDir =
   case bindDir of
-    BindFromLeft -> Function op (reverse . fst $ foldl' bindArg ([], False) args)
-    BindFromRight -> Function op (fst $ foldr (flip bindArg) ([], False) args)
+    BindFromLeft -> Function t impl (reverse . fst $ foldl' bindArg ([], False) args)
+    BindFromRight -> Function t impl (fst $ foldr (flip bindArg) ([], False) args)
   where
     bindArg (args, True) a = (a : args, True)
     bindArg (args, False) a@(Bound _) = (a : args, False)
     bindArg (args, False) Unbound = (Bound v : args, True)
 
 getUnbound :: Function -> [Argument]
-getUnbound (Function _ args) = filter (== Unbound) args
+getUnbound (Function _ _ args) = filter (== Unbound) args
 
 getBound :: Function -> [Argument]
-getBound (Function _ args) = filter (/= Unbound) args
+getBound (Function _ _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
 applyF :: Function -> Value -> BindDir -> IO (Either ApplyValenceError Value)
@@ -247,20 +251,13 @@ unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
 evalF :: Function -> IO (Either CrossbowEvalError Value)
-evalF f@(Function (Operator (OpType t) (Valence v)) args)
+evalF f@(Function t impl args)
   | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
   | otherwise =
-    case M.lookup t builtins of
-      Nothing -> return . Left $ EvalError ("Unsupported opType: " <> t)
-      Just (_, HSImpl hsF) ->
-        if length argVals == v
-          then return . Right $ hsF argVals
-          else return . Left $ EvalError "Can't run HS impl without correct valence"
-      Just (_, HSImplIO hsF) ->
-        if length argVals == v
-          then Right <$> hsF argVals
-          else return . Left $ EvalError "Can't run HS impl without correct valence"
-      Just (_, CBImpl cbF) ->
+    case impl of
+      HSImpl hsF -> return . Right $ hsF argVals
+      HSImplIO hsF -> Right <$> hsF argVals
+      CBImpl cbF ->
         case argVals of
           [arg] -> do
             resultM <- runWith cbF (ProgramState (Just arg))
