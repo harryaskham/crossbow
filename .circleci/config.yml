@@ -1,0 +1,29 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: haskell:8.10.7
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Cached Artifacts
+          key: haskell-artifacts-{{ checksum "circleci-cabal.cabal" }}
+      - run:
+          name: Update Dependencies
+          command: cabal new-update && cabal new-install --lib
+      - run:
+          name: Build
+          command: cabal new-build
+      - run:
+          name: Build Tests
+          command: cabal new-build --enable-tests
+      - save_cache:
+          name: Cache Artifacts
+          key: haskell-artifacts-{{ checksum "circleci-cabal.cabal" }}
+          paths:
+            - "/root/.cabal"
+            - "dist-newstyle"
+      - run:
+          name: Run Tests
+          command: cabal new-test --enable-tests --test-show-details=streaming
