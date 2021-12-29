@@ -6,12 +6,17 @@ Solve problems using arrows.
 
 * TODO
 - next
-  - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
-    - Take out every fromRight'
-    - Resolve every warning in the main code via Left
-    - In the builtins, resolve via some short-circuiting VError
   - Seriously rework the pass-forward semantics; pick one semantics and make it work rather than current situation where lots of unsound approaches work
     - Means reworking the parser to enable things like filter >1
+    - Remove rightward binding?
+    - Or! introduce underscore binding
+  - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
+    - Take out every fromRight'
+      - Interpreter
+      - Parser: when eval'ing
+    - Resolve every warning in the main code via Left
+    - In the builtins, resolve via some short-circuiting VError
+    - Then never have the interpreter panic
 - language features
   - [ ] variable allocation
   - [ ] scoping rules

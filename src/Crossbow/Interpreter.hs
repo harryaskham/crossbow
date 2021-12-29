@@ -15,10 +15,18 @@ import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
 import Prelude hiding (optional)
 
+data CrossbowParseError
+  = ArgNumError
+  | FullApplicationError CrossbowEvalError
+  | UncaughtParseError ParseError
+  deriving (Show)
+
 type P = GenParser Char ()
 
-compile :: Text -> Either ParseError Program
-compile = parse program "" . T.unpack
+compile :: Text -> Either CrossbowParseError Program
+compile t = case parse program "" . T.unpack $ t of
+  Left e -> Left $ UncaughtParseError e
+  Right p -> Right p
 
 compileUnsafe :: Text -> Program
 compileUnsafe = fromRight' . compile
@@ -44,7 +52,18 @@ clause :: P Clause
 clause = CLValue <$> value <*> clauseDivider
 
 value :: P Value
-value = firstOf [vRange, vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString, vBool]
+value =
+  firstOf
+    [ vRange,
+      vFuncL,
+      --vFuncR,
+      vFunc,
+      vList,
+      vNumber,
+      vChar,
+      vString,
+      vBool
+    ]
   where
     vNumber = do
       x <- T.pack <$> ignoreSpaces (many1 (oneOf "-.0123456789"))
@@ -62,36 +81,41 @@ value = firstOf [vRange, vFuncL, vFuncR, vFunc, vList, vNumber, vChar, vString, 
       return $ VList (VInteger <$> [a .. b])
     -- TODO: Uses unsafePerformIO to reduce functions as we parse
     -- This will break e.g. fully applied getline
+    maybeApply :: Function -> Either CrossbowParseError Value
     maybeApply f
-      | null (getUnbound f) = fromRight' (unsafePerformIO $ evalF f)
-      | otherwise = VFunction f
-    vFuncR = maybeApply . fromRight' <$> (mkFuncR <$> operator <*> many1 value)
+      | null (getUnbound f) =
+        case unsafePerformIO $ evalF f of
+          Left e -> Left $ FullApplicationError e
+          Right v -> Right v
+      | otherwise = Right $ VFunction f
+    vFuncL =
+      do
+        op <- operator
+        args <- many1 ((Bound <$> value) <|> (char '_' $> Unbound))
+        case mkFuncL op args of
+          Left e -> fail (show e)
+          Right f -> case maybeApply f of
+            Left e -> fail (show e)
+            Right v -> return v
     -- Only allow literal partial right application to avoid infinite parsing
-    vLiteral = firstOf [vList, vNumber]
-    vFuncL = maybeApply . fromRight' <$> (flip mkFuncL <$> many1 vLiteral <*> operator)
+    -- TODO: Disabled in favour of consistent left application
+    -- vLiteral = firstOf [vList, vNumber]
+    -- vFuncR = maybeApply . fromRight' <$> (flip mkFuncR <$> many1 vLiteral <*> operator)
     -- Finally, a func with no arguments
-    vFunc = maybeApply . mkFunc <$> operator
-
-data ArgNumError = ArgNumError
+    vFunc =
+      do
+        op <- operator
+        case maybeApply $ mkFunc op of
+          Left e -> fail (show e)
+          Right v -> return v
 
 mkFunc :: Operator -> Function
 mkFunc o@(Operator _ (Valence v)) = Function o (replicate v Unbound)
 
-mkFuncL :: Operator -> [Value] -> Either ArgNumError Function
+mkFuncL :: Operator -> [Argument] -> Either CrossbowParseError Function
 mkFuncL o@(Operator _ (Valence v)) args
-  | length args > v = Left ArgNumError
-  | otherwise =
-    let unbound = replicate (v - length args) Unbound
-        bound = Bound <$> args
-     in Right $ Function o (bound ++ unbound)
-
-mkFuncR :: Operator -> [Value] -> Either ArgNumError Function
-mkFuncR o@(Operator _ (Valence v)) args
-  | length args > v = Left ArgNumError
-  | otherwise =
-    let unbound = replicate (v - length args) Unbound
-        bound = Bound <$> args
-     in Right $ Function o (unbound ++ bound)
+  | length args /= v = Left ArgNumError
+  | otherwise = Right $ Function o args
 
 operator :: P Operator
 operator = ignoreSpaces $ do
@@ -196,13 +220,13 @@ applyF f value bindDir
   where
     unbound = getUnbound f
 
-data EvalError = EvalError Text
+data CrossbowEvalError = EvalError Text deriving (Show)
 
 unbind :: Argument -> Value
 unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
-evalF :: Function -> IO (Either EvalError Value)
+evalF :: Function -> IO (Either CrossbowEvalError Value)
 evalF f@(Function (Operator (OpType t) (Valence v)) args)
   | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
   | otherwise =
