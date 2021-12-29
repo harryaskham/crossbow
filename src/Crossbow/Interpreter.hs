@@ -56,7 +56,7 @@ value =
   firstOf
     [ vRange,
       vFuncL,
-      --vFuncR,
+      vFuncBin, -- disabled due to left recursion
       vFunc,
       vList,
       vNumber,
@@ -81,33 +81,36 @@ value =
       return $ VList (VInteger <$> [a .. b])
     -- TODO: Uses unsafePerformIO to reduce functions as we parse
     -- This will break e.g. fully applied getline
-    maybeApply :: Function -> Either CrossbowParseError Value
     maybeApply f
       | null (getUnbound f) =
         case unsafePerformIO $ evalF f of
-          Left e -> Left $ FullApplicationError e
-          Right v -> Right v
-      | otherwise = Right $ VFunction f
+          Left e -> fail (show e)
+          Right v -> return v
+      | otherwise = return $ VFunction f
+    arg = ignoreSpaces $ ((Bound <$> value) <|> (char '_' $> Unbound))
+    vFuncBin =
+      do
+        char '('
+        a1 <- arg
+        op <- operator
+        a2 <- arg
+        char ')'
+        case mkFuncL op [a1, a2] of
+          Left e -> fail (show e)
+          Right f -> maybeApply f
+    -- A polish notation left-applied func with maybe unbound variables
     vFuncL =
       do
         op <- operator
-        args <- many1 ((Bound <$> value) <|> (char '_' $> Unbound))
+        args <- many1 arg
         case mkFuncL op args of
           Left e -> fail (show e)
-          Right f -> case maybeApply f of
-            Left e -> fail (show e)
-            Right v -> return v
-    -- Only allow literal partial right application to avoid infinite parsing
-    -- TODO: Disabled in favour of consistent left application
-    -- vLiteral = firstOf [vList, vNumber]
-    -- vFuncR = maybeApply . fromRight' <$> (flip mkFuncR <$> many1 vLiteral <*> operator)
+          Right f -> maybeApply f
     -- Finally, a func with no arguments
-    vFunc =
-      do
-        op <- operator
-        case maybeApply $ mkFunc op of
-          Left e -> fail (show e)
-          Right v -> return v
+    vFunc = do
+      op <- operator
+      let f = mkFunc op
+      maybeApply f
 
 mkFunc :: Operator -> Function
 mkFunc o@(Operator _ (Valence v)) = Function o (replicate v Unbound)

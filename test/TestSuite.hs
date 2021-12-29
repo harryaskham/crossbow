@@ -56,3 +56,6 @@ main = do
   assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
   assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
   assertEvaluatesTo "filter" "filter | <_10 | 8:12" (VList $ VInteger <$> [8, 9])
+  assertEvaluatesTo "filter without pipes" "filter (_<10) 8:12" (VList $ VInteger <$> [8, 9])
+  assertEvaluatesTo "filter forward" "8:12 | filter (_<10) _" (VList $ VInteger <$> [8, 9])
+  assertEvaluatesTo "binary functions" "(1+2)" (VInteger 3)
