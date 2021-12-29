@@ -7,6 +7,10 @@
       - And in parser: when eval'ing
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
+  - [ ] Remove explicit Valence, infer it from the unbound arguments
+  - [ ] variadic, inverse function of monadic
+    - For this, require monadic to be properly curried
+    - Which requires proper actual currying
 - Language features
   - [ ] If/Then/Else
   - [ ] Program fragments as lambdas
@@ -44,6 +48,7 @@
   - [ ] parsing
   - [ ] sorting
   - [ ] lists
+  - [ ] sets
   - [ ] search
   - [ ] DS from prims (trees from list-nests, etc)
   - [ ] assoc lists / maps

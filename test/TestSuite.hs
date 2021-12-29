@@ -65,6 +65,8 @@ main = do
     (VList $ VInteger <$> [3, 5, 7])
   assertEvaluatesTo "list length" "length [1,2,3,4]" (VInteger 4)
   assertEvaluatesTo "empty list length" "length []" (VInteger 0)
+  assertEvaluatesTo "scanl" "scanl (+) 0 [1,2,3]" (VList $ VInteger <$> [0, 1, 3, 6])
+  assertEvaluatesTo "scanr" "scanr (+) 0 [1,2,3]" (VList $ VInteger <$> [6, 5, 3, 0])
 
   assertEvaluatesTo
     "Day 1 (Part 1)"

@@ -6,6 +6,7 @@ import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
 import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
+import Data.List qualified as L
 import Data.Map.Strict qualified as M
 import Data.String qualified
 import Data.Text qualified as T
@@ -290,7 +291,8 @@ builtins =
       ("const", (Valence 2, HSImpl (\[a, _] -> a))),
       ("drop", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (drop (fromIntegral n) as)))),
       ("take", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
-      ("head", (Valence 1, HSImpl (\[VList as] -> as !! 0))),
+      ("head", (Valence 1, HSImpl (\[VList as] -> L.head as))),
+      ("tail", (Valence 1, HSImpl (\[VList as] -> VList $ L.tail as))),
       ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
       ( "map",
         ( Valence 2,
@@ -340,6 +342,7 @@ builtins =
             )
         )
       ),
+      --("foldl1" (Valence 2, CBImpl (compileUnsafe "[f,xs]|[id,fork 2]|[id,[head,tail]]|
       ( "foldr",
         ( Valence 3,
           HSImplIO
