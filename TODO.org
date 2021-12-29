@@ -1,18 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] STOP HARDCODING 1-lAMBDAS
-  - [ ] Issue is we don't seem to be substituting, so we aren't reducing as we go
-  - [X] Start with unnamed lambda args like $0, $1
-    - need to terminate when eval'ing Identifier
-    - only eval resume after subbing
-  - [X] Unify functions and programs; | is just the ap function
-    - Do everything in parser including reduction
-  - [ ] Program context is where we store builtins etc, enabling lambdas / anons and global bindings
-  - [ ] Move the standard library to a module system
-  - [ ] Lambdas
-    - args as list (monadic)
-    - args as variadic
+  - [ ] Un-hardcode 1-lambdas and enable $1+
   - [ ] Sliding windows for AOC pt2
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'
@@ -30,14 +19,21 @@
         - No, because the builtins are where the impls are stored
         - Instead we should really be storing the Impl inside the function
 - Language features
-  - [ ] If/Then/Else
   - [ ] Program fragments as lambdas
     - Either monadic (args as a list) or variadic (how?)
     - Allow parsing subprograms in parens
   - [ ] Let bindings
   - [ ] Lexical scoping
+  - [ ] Move the standard library to a module system
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [X] If/Then/Else
+  - [X] Lambdas
+  - [X] Start with unnamed lambda args like $0, $1
+    - need to terminate when eval'ing Identifier
+    - only eval resume after subbing
+  - [X] Unify functions and programs; | is just the ap function
+    - Do everything in parser including reduction
   - [X] Bools
   - [X] Falsy 0, [] and False
   - [X] Enable builtins written in Crossbow
