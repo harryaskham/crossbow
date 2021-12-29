@@ -4,6 +4,8 @@ A dynamic, interactive programming language.
 
 Solve problems using arrows.
 
+[[example.png]]
+
 * TODO
 - next
   - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
