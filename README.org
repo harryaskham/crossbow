@@ -1,6 +1,6 @@
 #+TITLE: Crossbow
 
-*This is an experimental project not ready for general use*
+*This is an experimental personal project not intended for general use*
 
 [[https://circleci.com/gh/harryaskham/hif][https://circleci.com/gh/harryaskham/hif.svg?style=svg]]
 
