@@ -79,7 +79,7 @@ truthy _ = True
 castToInt :: Value -> Value
 castToInt v@(VInteger _) = v
 castToInt (VDouble v) = VInteger (round v)
-castToInt (VChar v) = VInteger (fromIntegral $ ord v)
+castToInt (VChar v) = VInteger (fromIntegral $ digitToInt v)
 castToInt v@(VList vs)
   | all (`elem` (VChar <$> ("-0123456789" :: String))) vs =
     VInteger (readOne (TR.signed TR.decimal) (asText v))
@@ -90,18 +90,18 @@ castToInt (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
 castToDouble :: Value -> Value
 castToDouble v@(VDouble _) = v
 castToDouble (VInteger v) = VDouble (fromIntegral v)
-castToDouble (VChar v) = VDouble (fromIntegral $ ord v)
+castToDouble (VChar v) = VDouble (fromIntegral $ digitToInt v)
 castToDouble (VList vs) = VList (castToDouble <$> vs)
 castToDouble f@(VFunction _) = f -- TODO: Compose casting with the given f
 castToDouble (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
 
 castToChar :: Value -> Value
 castToChar v@(VChar _) = v
-castToChar (VInteger v) = VChar (chr (fromIntegral v))
-castToChar (VDouble v) = VChar (chr $ round v)
+castToChar (VInteger v) = VChar (intToDigit (fromIntegral v))
+castToChar (VDouble v) = VChar (intToDigit $ round v)
 castToChar (VList vs) = VList (castToChar <$> vs)
 castToChar f@(VFunction _) = f -- TODO: Compose casting with the given f
-castToChar (VBool b) = VChar (chr $ fromEnum b)
+castToChar (VBool b) = VChar (intToDigit $ fromEnum b)
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"

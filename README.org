@@ -6,10 +6,6 @@ Solve problems using arrows.
 
 * TODO
 - next
-  - Seriously rework the pass-forward semantics; pick one semantics and make it work rather than current situation where lots of unsound approaches work
-    - Means reworking the parser to enable things like filter >1
-    - Remove rightward binding?
-    - Or! introduce underscore binding
   - NO PARTIAL FUNCTIONS: Handle every single error with informative messages
     - Take out every fromRight'
       - Interpreter
@@ -19,13 +15,15 @@ Solve problems using arrows.
     - In the builtins, resolve via some short-circuiting VError
     - Then never have the interpreter panic
 - language features
+  - [ ] lambdas are just fragments!
+    - allow programs in parens with sensible composition rules
   - [ ] variable allocation
   - [ ] scoping rules
   - [ ] function definition
-  - [ ] predicates, bools and truthiness
-  - [ ] 0, [] and False all falsy???
-  - [ ] control flow like splitif? or masking like APL?
+  - [ ] if then else
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [X] predicates, bools and truthiness
+  - [X] 0, [] and False all falsy???
   - [X] builtins defined in terms of the language itself - e.g. map n fold
   - [X] left-partiality e.g 1+ allowed as well as +1
   - [X] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9

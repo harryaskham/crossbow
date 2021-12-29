@@ -4,6 +4,7 @@ import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
+import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
 import Data.Map.Strict qualified as M
 import Data.String qualified
@@ -51,14 +52,16 @@ program = Program <$> many clause
 clause :: P Clause
 clause = CLValue <$> value <*> clauseDivider
 
+inParens :: P a -> P a
+inParens = between (char '(') (char ')')
+
 value :: P Value
 value =
   firstOf
     [ vRange,
       vNumber,
-      vFuncL,
-      vFuncBin,
-      vFunc,
+      inParens value,
+      vFunction,
       vList,
       vChar,
       vString,
@@ -117,13 +120,20 @@ value =
       op <- operator
       let f = mkFunc op
       maybeApply f
+    vFunction =
+      firstOf
+        [ vFuncL,
+          vFuncBin,
+          vFunc
+        ]
 
 mkFunc :: Operator -> Function
 mkFunc o@(Operator _ (Valence v)) = Function o (replicate v Unbound)
 
 mkFuncL :: Operator -> [Argument] -> Either CrossbowParseError Function
 mkFuncL o@(Operator _ (Valence v)) args
-  | length args /= v = Left ArgNumError
+  | length args > v = Left ArgNumError
+  | length args < v = Right $ Function o (args ++ replicate (v - length args) Unbound)
   | otherwise = Right $ Function o args
 
 operator :: P Operator
@@ -186,7 +196,7 @@ apply (VList as@((VFunction _) : _)) (VList bs) div =
         dir = divToDir div
     rs <- sequence $ applyF <$> fs <*> bz <*> pure dir
     return . VList . fmap fromRight' . getZipList $ rs
--- Fanout values with post-application of applicatives should work the same way
+-- Fork values with post-application of applicatives should work the same way
 apply (VList bs) (VList as@((VFunction _) : _)) div =
   do
     let unwrap (VFunction f) = f
@@ -306,26 +316,78 @@ builtins =
             )
         )
       ),
-      ("sum", (Valence 1, CBImpl (compileUnsafe "fold|+|0"))),
+      ("aoc", (Valence 1, CBImpl (compileUnsafe "string|(\"/Users/askham/code/advent/2021/input/\"+_)|(_+\".txt\")|read"))),
+      ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
       -- TODO:
       -- define head, tail
       -- need applicative style for lists of functions
-      -- then fold1 using fanout on input to do fold|f|head|tail
+      -- then fold1 using fork on input to do fold|f|head|tail
       -- then redefine maximum and minimum in terms of fold1
-      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|(-1)"))),
-      ( "fold",
+      ("maximum", (Valence 1, CBImpl (compileUnsafe "foldl|max|(-1)"))),
+      ("length", (Valence 1, CBImpl (compileUnsafe "map (const 1 _)|sum"))),
+      ( "foldl",
         ( Valence 3,
           HSImplIO
-            ( let fold [_, acc, VList []] = return acc
-                  fold [VFunction f, acc, VList (x : xs)] = do
-                    (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
-                    acc' <- fromRight' <$> applyF f' x BindFromLeft
-                    fold [VFunction f, acc', VList xs]
-               in fold
+            ( \[VFunction f, acc, VList xs] ->
+                foldlM
+                  ( \acc x -> do
+                      (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
+                      acc' <- fromRight' <$> applyF f' x BindFromLeft
+                      return acc'
+                  )
+                  acc
+                  xs
             )
         )
       ),
-      ("fanout", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
+      ( "foldr",
+        ( Valence 3,
+          HSImplIO
+            ( \[VFunction f, VList xs, acc] ->
+                foldrM
+                  ( \acc x -> do
+                      (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
+                      acc' <- fromRight' <$> applyF f' x BindFromLeft
+                      return acc'
+                  )
+                  acc
+                  xs
+            )
+        )
+      ),
+      ( "scanl",
+        ( Valence 3,
+          HSImplIO
+            ( \[VFunction f, acc, VList xs] ->
+                fmap VList . sequence $
+                  scanl'
+                    ( \accM x -> do
+                        acc <- accM
+                        (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
+                        fromRight' <$> applyF f' x BindFromLeft
+                    )
+                    (pure acc)
+                    xs
+            )
+        )
+      ),
+      ( "scanr",
+        ( Valence 3,
+          HSImplIO
+            ( \[VFunction f, acc, VList xs] ->
+                fmap VList . sequence $
+                  scanr
+                    ( \x accM -> do
+                        acc <- accM
+                        (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
+                        fromRight' <$> applyF f' x BindFromLeft
+                    )
+                    (pure acc)
+                    xs
+            )
+        )
+      ),
+      ("fork", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
       ( "monadic",
         ( Valence 2,
           HSImplIO
@@ -348,6 +410,7 @@ builtins =
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
       ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
+      ("string", (Valence 1, HSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
       ( "read",
         ( Valence 1,
           HSImplIO
