@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Move the standard library to a module system
   - [ ] Lambdas
     - args as list (monadic)
     - args as variadic
