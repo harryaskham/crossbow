@@ -10,7 +10,12 @@
   - [ ] Remove explicit Valence, infer it from the unbound arguments
   - [ ] variadic, inverse function of monadic
     - For this, require monadic to be properly curried
-    - Which requires proper actual currying
+      - Which requires proper actual currying
+      - e.g. monadic has valence 1, takes a function with any valence, and returns a function with valence 1.
+      - But this new function won't be "findable" by optype?
+        - Solve with Anon optype?
+        - No, because the builtins are where the impls are stored
+        - Instead we should really be storing the Impl inside the function
 - Language features
   - [ ] If/Then/Else
   - [ ] Program fragments as lambdas
