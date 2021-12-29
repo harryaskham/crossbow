@@ -282,9 +282,12 @@ evalF vf@(VFunction f@(Function _ impl args))
       CBImpl cbF ->
         case argVals of
           [arg] -> do
-            f <- cbF
-            result <- apply f arg
-            return $ Right result
+            case compile cbF of
+              Left e -> return $ Left (EvalError (show e))
+              Right fIO -> do
+                f <- fIO
+                result <- apply f arg
+                return $ Right result
           _ -> return . Left $ EvalError "Can only run CB impl monadically"
   where
     argVals = unbind <$> args
@@ -335,7 +338,7 @@ builtins =
       ("head", (Valence 1, HSImpl (\[VList as] -> L.head as))),
       ("tail", (Valence 1, HSImpl (\[VList as] -> VList $ L.tail as))),
       ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
-      ("pairs", (Valence 1, CBImpl (compileUnsafe "{$0|fork 2|[id, drop 1]|monadic zip}"))),
+      ("pairs", (Valence 1, CBImpl ("{$0|fork 2|[id, drop 1]|monadic zip}"))),
       ( "map",
         ( Valence 2,
           HSImplIO
@@ -361,17 +364,17 @@ builtins =
         )
       ),
       ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
-      ("aoc", (Valence 1, CBImpl (compileUnsafe "{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}"))),
-      ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
-      ("odd", (Valence 1, CBImpl (compileUnsafe "{$0|mod _ 2|bool}"))),
-      ("even", (Valence 1, CBImpl (compileUnsafe "{$0|odd|not}"))),
-      ("not", (Valence 1, CBImpl (compileUnsafe "if _ False True"))),
+      ("aoc", (Valence 1, CBImpl ("{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}"))),
+      ("sum", (Valence 1, CBImpl ("foldl|+|0"))),
+      ("odd", (Valence 1, CBImpl ("{$0|mod _ 2|bool}"))),
+      ("even", (Valence 1, CBImpl ("{$0|odd|not}"))),
+      ("not", (Valence 1, CBImpl ("if _ False True"))),
       -- TODO:
       -- multiarg lambda
       -- fold1 using lambda
       -- then redefine maximum and minimum in terms of fold1
-      ("maximum", (Valence 1, CBImpl (compileUnsafe "foldl|max|(-1)"))),
-      ("length", (Valence 1, CBImpl (compileUnsafe "foldl (flip const (+1) _) 0"))),
+      ("maximum", (Valence 1, CBImpl ("foldl|max|(-1)"))),
+      ("length", (Valence 1, CBImpl ("foldl (flip const (+1) _) 0"))),
       ( "foldl",
         ( Valence 3,
           HSImplIO
@@ -387,7 +390,7 @@ builtins =
             )
         )
       ),
-      --("foldl1" (Valence 2, CBImpl (compileUnsafe "[f,xs]|[id,fork 2]|[id,[head,tail]]|
+      --("foldl1" (Valence 2, CBImpl ( "[f,xs]|[id,fork 2]|[id,[head,tail]]|
       ( "foldr",
         ( Valence 3,
           HSImplIO
@@ -447,7 +450,7 @@ builtins =
             )
         )
       ),
-      ("reverse", (Valence 1, CBImpl (compileUnsafe "foldl (flip cons) [] _"))),
+      ("reverse", (Valence 1, CBImpl ("foldl (flip cons) [] _"))),
       ( "ap",
         ( Valence 2,
           HSImplIO
