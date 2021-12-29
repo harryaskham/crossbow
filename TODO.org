@@ -1,11 +1,13 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Program context is where we store builtins etc, enabling lambdas / anons and global bindings
+  - [ ] Unify functions and programs; | is just the ap function
   - [ ] Move the standard library to a module system
   - [ ] Lambdas
     - args as list (monadic)
     - args as variadic
-  - [ ] Sliding windows
+  - [ ] Sliding windows for AOC pt2
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'
       - Interpreter.hs
