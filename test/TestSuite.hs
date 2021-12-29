@@ -71,6 +71,7 @@ main = do
   assertEvaluatesTo "fork and ap" "6 | fork 2 | [+,+1] | monadic ap" (VInteger 13)
   assertEvaluatesTo "fork and flap" "6 | fork 2 | [+1,+] | monadic (flip ap)" (VInteger 13)
   assertEvaluatesTo "not true" "not True" (VBool False)
+  assertEvaluatesTo "evens" "1:10|filter even" (VList $ VInteger <$> [2, 4, 6, 8, 10])
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
