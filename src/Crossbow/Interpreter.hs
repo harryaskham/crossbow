@@ -331,6 +331,7 @@ builtins =
       ("head", (Valence 1, HSImpl (\[VList as] -> L.head as))),
       ("tail", (Valence 1, HSImpl (\[VList as] -> VList $ L.tail as))),
       ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
+      ("pairs", (Valence 1, CBImpl (compileUnsafe "{$0|fork 2|[id, drop 1]|monadic zip}"))),
       ( "map",
         ( Valence 2,
           HSImplIO

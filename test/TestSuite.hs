@@ -75,7 +75,7 @@ main = do
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
-    "aoc 1 | lines | int | fork 2 | [drop 1, id] | monadic zip | filter (monadic >) | length"
+    "aoc 1 | lines | int | pairs | filter (monadic <) | length"
     (VInteger 1316)
 
 --assertEvaluatesTo "Day 1 (Part 2)" "" (VInteger 1344)
