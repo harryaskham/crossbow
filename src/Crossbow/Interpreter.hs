@@ -281,6 +281,8 @@ builtins =
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
       ("*", (Valence 2, HSImpl (\[a, b] -> a * b))),
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
+      ("mod", (Valence 2, HSImpl (\[a, b] -> a `mod` b))),
+      ("div", (Valence 2, HSImpl (\[a, b] -> a `div` b))),
       ("<=", (Valence 2, HSImpl (\[a, b] -> VBool $ a <= b))),
       ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
       (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),

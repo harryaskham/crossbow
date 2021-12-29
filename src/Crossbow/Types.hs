@@ -15,6 +15,11 @@ data Value
   | VFunction Function
   deriving (Show, Eq)
 
+-- TODO: Required for Integral - what does this break?
+instance Enum Value where
+  toEnum = undefined
+  fromEnum = undefined
+
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
   (VDouble a) <> (VDouble b) = VDouble (a + b)
@@ -51,6 +56,13 @@ instance Num Value where
   negate (VDouble a) = VDouble (negate a)
   negate (VBool True) = VBool False
   negate (VBool False) = VBool True
+
+instance Integral Value where
+  quotRem a b = (castToInt a) `quotRem` (castToInt b)
+  toInteger a = let (VInteger a') = castToInt a in a'
+
+instance Real Value where
+  toRational a = let (VDouble a') = castToDouble a in toRational a'
 
 vCons :: Value -> Value -> Value
 vCons a (VList bs) = VList (a : bs)
