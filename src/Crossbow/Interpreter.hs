@@ -251,7 +251,7 @@ unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
 evalF :: Function -> IO (Either CrossbowEvalError Value)
-evalF f@(Function t impl args)
+evalF f@(Function _ impl args)
   | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
   | otherwise =
     case impl of
