@@ -286,9 +286,11 @@ evalF vf@(VFunction f@(Function _ impl args))
     argVals = unbind <$> args
 evalF v = return $ Right v
 
+-- Turn e.g. $4 into 4
 identifierIx :: Value -> Int
 identifierIx (VIdentifier i) = readOne decimal (T.drop 1 i)
 
+-- Sub any Identifier placeholders with their actual values
 substituteArgs :: [Value] -> IO Value -> IO Value
 substituteArgs subs vIO = do
   v <- vIO
@@ -302,11 +304,6 @@ substituteArgs subs vIO = do
   where
     substituteBoundArg _ Unbound = return Unbound
     substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
-
--- Evaluate the given value (probably a lambda) after substituting identifiers
--- TODO: Only subs, needs to eval still
-evalWithContext :: [Value] -> Value -> IO (Either CrossbowEvalError Value)
-evalWithContext args v = evalF =<< substituteArgs args (pure v)
 
 -- Helper to pass through a Haskell function to the builtins
 passthrough2 :: Text -> (Value -> Value -> Value) -> (Text, (Valence, OpImpl))
