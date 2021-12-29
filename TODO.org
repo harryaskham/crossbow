@@ -1,8 +1,13 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] STOP HARDCODING 1-lAMBDAS
+  - [ ] Start with unnamed lambda args like $0, $1
+    - need to terminate when eval'ing Identifier
+    - only eval resume after subbing
+  - [X] Unify functions and programs; | is just the ap function
+    - Do everything in parser including reduction
   - [ ] Program context is where we store builtins etc, enabling lambdas / anons and global bindings
-  - [ ] Unify functions and programs; | is just the ap function
   - [ ] Move the standard library to a module system
   - [ ] Lambdas
     - args as list (monadic)

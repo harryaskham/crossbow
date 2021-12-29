@@ -11,9 +11,9 @@ assertEvaluatesTo msg program expected = do
   print msg
   case compile program of
     Left e -> assertFailure (T.unpack msg <> show e)
-    Right p -> do
-      resultM <- run p
-      assertEqual (T.unpack msg) resultM (Just expected)
+    Right vIO -> do
+      v <- vIO
+      assertEqual (T.unpack msg) v expected
 
 main :: IO ()
 main = do

@@ -26,12 +26,12 @@ data CrossbowParseError
 
 type P = GenParser Char ()
 
-compile :: Text -> Either CrossbowParseError Program
+compile :: Text -> Either CrossbowParseError (IO Value)
 compile t = case parse program "" . T.unpack $ t of
   Left e -> Left $ UncaughtParseError e
   Right p -> Right p
 
-compileUnsafe :: Text -> Program
+compileUnsafe :: Text -> IO Value
 compileUnsafe = fromRight' . compile
 
 -- Parse one of the things given, backtracking on failure
@@ -44,29 +44,18 @@ ignoreSpaces p = spaces *> p <* spaces
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
--- vProgram lets us parse an entire program with application
--- TODO: Use this and do away with clases entirely
-vProgram :: P (IO Value)
-vProgram = do
-  ((CLValue c) : clauses) <- clause `sepBy1` clauseDivider
+program :: P (IO Value)
+program = do
+  (c : clauses) <- (pure <$> value) `sepBy1` clauseDivider
   return $
     foldl'
-      ( \vIO c -> do
+      ( \vIO cIO -> do
           v <- vIO
-          runClauseV v c
+          c <- cIO
+          apply v c
       )
-      (pure c)
+      c
       clauses
-
-program :: P Program
-program = Program <$> (clause `sepBy` clauseDivider)
-
---program = do
---  p <- vProgram
---  return $ Program [CLValue p NoDiv]
-
-clause :: P Clause
-clause = CLValue <$> value
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
@@ -78,6 +67,7 @@ value =
       vNumber,
       inParens value,
       vLambda,
+      vIdentifier,
       vFunction,
       vList,
       vChar,
@@ -85,6 +75,10 @@ value =
       vBool
     ]
   where
+    vIdentifier = do
+      char '$'
+      n <- many1 digit
+      return $ VIdentifier ("$" <> T.pack n)
     vNegativeNumber = do
       char '('
       x <- ignoreSpaces $ char '-' *> vNumber
@@ -107,9 +101,10 @@ value =
       return $ VList (VInteger <$> [a .. b])
     -- TODO: Uses unsafePerformIO to reduce functions as we parse
     -- This will break e.g. fully applied getline
+    -- TODO: Change this to a P (IO Value)
     maybeApply f
       | null (getUnbound f) =
-        case unsafePerformIO $ evalF f of
+        case unsafePerformIO $ evalF (VFunction f) of
           Left e -> fail (show e)
           Right v -> return v
       | otherwise = return $ VFunction f
@@ -143,22 +138,34 @@ value =
           vFuncBin,
           vFunc
         ]
+    -- TODO: Lambdas of more than one variable
     vLambda = do
       char '{'
-      fIO <- vProgram
+      bodyIO <- program
       char '}'
       return $
         VFunction
           ( Function
               Nothing
               ( HSImplIO
-                  ( \[a] -> do
-                      (VFunction f) <- fIO
-                      fromRight' <$> applyF f a BindFromLeft
+                  ( \args -> do
+                      body <- bodyIO
+                      rE <- evalWithContext args body
+                      case rE of
+                        Left e -> error (show e)
+                        Right r -> return r
                   )
               )
-              [Unbound]
+              [Unbound] -- TODO: THIS ONLY ALLOWS 1-LAMBDAS
           )
+
+maxArgIx :: Value -> Maybe Int
+maxArgIx i@(VIdentifier _) = Just $ identifierIx i
+maxArgIx (VFunction f@(Function _ _ _)) =
+  case mapMaybe maxArgIx $ unbind <$> getBound f of
+    [] -> Nothing
+    ixs -> Just $ L.maximum ixs
+maxArgIx _ = Nothing
 
 mkFunc :: Operator -> Function
 mkFunc (Operator (OpType t) (Valence v)) =
@@ -179,33 +186,6 @@ operator = ignoreSpaces $ do
   k <- T.pack <$> firstOf (string . T.unpack <$> (sortOn (Down . T.length) (M.keys builtins)))
   let (v, _) = builtins M.! k
   return $ Operator (OpType k) v
-
--- TODO: Re-split parser and interpreter; below here is interpreter, above is parser
-
--- TODO: Expand to include all kinds of things like arrow branching, etc
-data ProgramState = ProgramState (Maybe Value) deriving (Show)
-
-run :: Program -> IO (Maybe Value)
-run program = runWith program (ProgramState Nothing)
-
-runWith :: Program -> ProgramState -> IO (Maybe Value)
-runWith program ps = do
-  (ProgramState v) <- go ps program
-  return v
-  where
-    go ps (Program []) = return ps
-    go ps (Program (c : cs)) = do
-      ps' <- runClause ps c
-      go ps' (Program cs)
-
-runClause :: ProgramState -> Clause -> IO ProgramState
--- If we're running a function / defining a constant on no state, whatever this is becomes the state
-runClause (ProgramState Nothing) (CLValue v) = return . ProgramState $ Just v
--- Running a function on state applies it
-runClause (ProgramState (Just ps)) (CLValue v) = ProgramState . Just <$> apply ps v
-
-runClauseV :: Value -> Clause -> IO Value
-runClauseV a (CLValue b) = apply a b
 
 data BindDir = BindFromLeft | BindFromRight
 
@@ -262,7 +242,7 @@ applyF :: Function -> Value -> BindDir -> IO (Either ApplyValenceError Value)
 applyF f value bindDir
   | null unbound = return $ Left ApplyValenceError
   | length unbound == 1 = do
-    resultE <- evalF (bindNext f value bindDir)
+    resultE <- evalF (VFunction (bindNext f value bindDir))
     return $ Right (fromRight' resultE)
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
   where
@@ -274,9 +254,15 @@ unbind :: Argument -> Value
 unbind (Bound v) = v
 unbind Unbound = error "Unbinding unbound"
 
-evalF :: Function -> IO (Either CrossbowEvalError Value)
-evalF f@(Function _ impl args)
+isIdentifier :: Value -> Bool
+isIdentifier (VIdentifier _) = True
+isIdentifier _ = False
+
+evalF :: Value -> IO (Either CrossbowEvalError Value)
+evalF vf@(VFunction f@(Function _ impl args))
   | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
+  -- If we have any unbound variables we can't eval down any further
+  | any isIdentifier argVals = return $ Right vf
   | otherwise =
     case impl of
       HSImpl hsF -> return . Right $ hsF argVals
@@ -284,13 +270,32 @@ evalF f@(Function _ impl args)
       CBImpl cbF ->
         case argVals of
           [arg] -> do
-            resultM <- runWith cbF (ProgramState (Just arg))
-            case resultM of
-              Nothing -> return . Left $ EvalError "Unknown failure running CBImpl"
-              Just result -> return . Right $ result
+            f <- cbF
+            result <- apply f arg
+            return $ Right result
           _ -> return . Left $ EvalError "Can only run CB impl monadically"
   where
     argVals = unbind <$> args
+evalF v = return $ Right v
+
+identifierIx :: Value -> Int
+identifierIx (VIdentifier i) = readOne decimal (T.drop 1 i)
+
+substituteArgs :: [Value] -> Value -> Value
+substituteArgs subs i@(VIdentifier _) = subs !! identifierIx i
+-- Get e.g. the 4th arg for $3
+substituteArgs subs (VList as) = VList (substituteArgs subs <$> as)
+substituteArgs subs (VFunction (Function n impl args)) =
+  VFunction (Function n impl (substituteBoundArg subs <$> args))
+  where
+    substituteBoundArg _ Unbound = Unbound
+    substituteBoundArg subs (Bound v) = Bound (substituteArgs subs v)
+substituteArgs _ v = v
+
+-- Evaluate the given value (probably a lambda) after substituting identifiers
+-- TODO: Only subs, needs to eval still
+evalWithContext :: [Value] -> Value -> IO (Either CrossbowEvalError Value)
+evalWithContext args v = evalF $ substituteArgs args v
 
 -- Helper to pass through a Haskell function to the builtins
 passthrough2 :: Text -> (Value -> Value -> Value) -> (Text, (Valence, OpImpl))
@@ -345,8 +350,8 @@ builtins =
       ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
       ("aoc", (Valence 1, CBImpl (compileUnsafe "string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read"))),
       ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
-      ("odd", (Valence 1, CBImpl (compileUnsafe "mod _ 2|bool"))),
-      ("even", (Valence 1, CBImpl (compileUnsafe "odd|not"))),
+      ("odd", (Valence 1, CBImpl (compileUnsafe "{mod $0 2|bool}"))),
+      ("even", (Valence 1, CBImpl (compileUnsafe "{$0|odd|not}"))),
       ("not", (Valence 1, CBImpl (compileUnsafe "if _ False True"))),
       -- TODO:
       -- define head, tail
@@ -354,7 +359,7 @@ builtins =
       -- then fold1 using fork on input to do fold|f|head|tail
       -- then redefine maximum and minimum in terms of fold1
       ("maximum", (Valence 1, CBImpl (compileUnsafe "foldl|max|(-1)"))),
-      ("length", (Valence 1, CBImpl (compileUnsafe "map (const 1 _)|sum"))),
+      ("length", (Valence 1, CBImpl (compileUnsafe "foldl (flip const (+1) _) 0"))),
       ( "foldl",
         ( Valence 3,
           HSImplIO

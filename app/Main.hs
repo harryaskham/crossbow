@@ -17,11 +17,9 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
         Nothing -> return ()
         Just input -> do
           case compile (T.pack input) of
-            Right program -> do
-              when debug (liftIO $ print program)
-              result <- liftIO $ run program
-              case result of
-                Nothing -> print "Unknown error"
-                Just r -> putTextLn (pretty r)
+            Right resultIO -> do
+              result <- liftIO resultIO
+              when debug (liftIO $ print result)
+              putTextLn (pretty result)
             Left e -> liftIO $ print (show e)
           loop

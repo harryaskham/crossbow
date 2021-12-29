@@ -15,6 +15,7 @@ data Value
   | VChar Char
   | VList [Value]
   | VFunction Function
+  | VIdentifier Text
   deriving (Show, Eq)
 
 -- TODO: Required for Integral - what does this break?
@@ -157,13 +158,9 @@ newtype Valence = Valence Int deriving (Show, Eq)
 data OpImpl
   = HSImpl ([Value] -> Value)
   | HSImplIO ([Value] -> IO Value)
-  | CBImpl Program
+  | CBImpl (IO Value)
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
-
-data Clause = CLValue Value deriving (Show, Eq)
-
-data Program = Program [Clause] deriving (Show, Eq)
 
 isChar :: Value -> Bool
 isChar (VChar _) = True
@@ -185,6 +182,7 @@ instance Pretty Value where
     | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
     | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
+  pretty (VIdentifier i) = i
 
 instance Pretty Function where
   pretty (Function name _ args) =
