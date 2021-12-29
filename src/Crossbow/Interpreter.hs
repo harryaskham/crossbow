@@ -361,7 +361,7 @@ builtins =
       ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
       ("aoc", (Valence 1, CBImpl (compileUnsafe "{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}"))),
       ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
-      ("odd", (Valence 1, CBImpl (compileUnsafe "{mod $0 2|bool}"))),
+      ("odd", (Valence 1, CBImpl (compileUnsafe "{$0|mod _ 2|bool}"))),
       ("even", (Valence 1, CBImpl (compileUnsafe "{$0|odd|not}"))),
       ("not", (Valence 1, CBImpl (compileUnsafe "if _ False True"))),
       -- TODO:
