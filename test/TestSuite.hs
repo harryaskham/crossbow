@@ -70,6 +70,7 @@ main = do
   assertEvaluatesTo "scanr" "scanr (+) 0 [1,2,3]" (VList $ VInteger <$> [6, 5, 3, 0])
   assertEvaluatesTo "fork and ap" "6 | fork 2 | [+,+1] | monadic ap" (VInteger 13)
   assertEvaluatesTo "fork and flap" "6 | fork 2 | [+1,+] | monadic (flip ap)" (VInteger 13)
+  assertEvaluatesTo "not true" "not True" (VBool False)
 
   assertEvaluatesTo
     "Day 1 (Part 1)"

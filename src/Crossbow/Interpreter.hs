@@ -321,8 +321,12 @@ builtins =
             )
         )
       ),
+      ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
       ("aoc", (Valence 1, CBImpl (compileUnsafe "string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read"))),
       ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
+      ("odd", (Valence 1, CBImpl (compileUnsafe "mod _ 2|bool"))),
+      ("even", (Valence 1, CBImpl (compileUnsafe "odd|not"))),
+      ("not", (Valence 1, CBImpl (compileUnsafe "if _ False True"))),
       -- TODO:
       -- define head, tail
       -- need applicative style for lists of functions
@@ -437,6 +441,7 @@ builtins =
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
       ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
+      ("bool", (Valence 1, HSImpl (\[a] -> VBool $ truthy a))),
       ("string", (Valence 1, HSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
       ( "read",
         ( Valence 1,

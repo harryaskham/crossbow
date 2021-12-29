@@ -5,6 +5,7 @@ import Data.Char
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read qualified as TR
+import Data.Tuple.Extra (both)
 
 data Value
   = VInteger Integer
@@ -17,8 +18,8 @@ data Value
 
 -- TODO: Required for Integral - what does this break?
 instance Enum Value where
-  toEnum = undefined
-  fromEnum = undefined
+  toEnum = error "Use of toEnum on Value"
+  fromEnum = error "Use of fromEnum on Value"
 
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
@@ -58,7 +59,10 @@ instance Num Value where
   negate (VBool False) = VBool True
 
 instance Integral Value where
-  quotRem a b = (castToInt a) `quotRem` (castToInt b)
+  quotRem a b =
+    let (VInteger a') = castToInt a
+        (VInteger b') = castToInt b
+     in both VInteger (a' `quotRem` b')
   toInteger a = let (VInteger a') = castToInt a in a'
 
 instance Real Value where
