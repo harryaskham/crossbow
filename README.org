@@ -2,7 +2,7 @@
 
 *This is an experimental personal project not intended for general use*
 
-[[https://circleci.com/gh/harryaskham/hif][https://circleci.com/gh/harryaskham/hif.svg?style=svg]]
+[[https://circleci.com/gh/harryaskham/crossbow][https://circleci.com/gh/harryaskham/crossbow.svg?style=svg]]
 
 A dynamic, interactive programming language.
 
