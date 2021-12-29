@@ -2,7 +2,7 @@
 
 A dynamic, interactive programming language.
 
-Solve problems using arrows.
+Solve problems using [https://en.wikipedia.org/wiki/Morphism](arrows).
 
 [[example.png]]
 
