@@ -1,0 +1,55 @@
+#+TITLE: TODO
+
+- Do Next
+  - [ ] Remove all partial functions to stop interpreter crashes:
+    - Take out every fromRight'
+      - Interpreter.hs
+      - And in parser: when eval'ing
+    - Semigroup / Num instances for Value need exhaustive patterns
+    - Builtin functions fail gracefully
+- Language features
+  - [ ] If/Then/Else
+  - [ ] Program fragments as lambdas
+    - Either monadic (args as a list) or variadic (how?)
+    - Allow parsing subprograms in parens
+  - [ ] Let bindings
+  - [ ] Lexical scoping
+  - [ ] Named function definition
+  - [ ] Shortcuts for referring to output of previous line / assignment
+  - [X] Bools
+  - [X] Falsy 0, [] and False
+  - [X] Enable builtins written in Crossbow
+  - [X] left-partiality e.g 1+ allowed as well as +1
+  - [X] partial application for e.g. 1,2,3|+,-,+|4,5,6 = 5,-3,9
+  - [X] Text
+  - [X] Read from files
+  - [X] Functoriality by default (e.g. [1,2,3] + 1 fmaps the addition)
+  - [X] explicit casting
+  - [X] function values
+  - [X] Clause pipes
+  - [X] Basic arithmetic
+- Interface Features
+  - [ ] Builtin for reading piped STDIN
+  - [ ] Evaluate on keypress
+  - [ ] Auto-updating display as you type
+    - With truncation for long strings, lists
+  - [ ] AST Tree mode; show forks, monadics as a digraph in ncurses
+  - [ ] Terminal colors
+  - [ ] Vim-like bindings w/ clause semantics
+- Standard Library
+  - [X] Functional basics
+    - [X] map
+    - [X] fold
+    - [X] scan
+  - [ ] parsing
+  - [ ] sorting
+  - [ ] lists
+  - [ ] search
+  - [ ] DS from prims (trees from list-nests, etc)
+  - [ ] assoc lists / maps
+  - [ ] map utils like countmap
+  - [ ] bitwise stuff
+- Misc Goals
+  - [-] solve 2021 AOC day by day
+  - [ ] compile to e.g. LLVM
+  - [ ] bootstrapped compiler written in crossbow
