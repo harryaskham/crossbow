@@ -55,25 +55,31 @@ value :: P Value
 value =
   firstOf
     [ vRange,
+      vNumber,
       vFuncL,
-      vFuncBin, -- disabled due to left recursion
+      vFuncBin,
       vFunc,
       vList,
-      vNumber,
       vChar,
       vString,
       vBool
     ]
   where
-    vNumber = do
-      x <- T.pack <$> ignoreSpaces (many1 (oneOf "-.0123456789"))
+    vNegativeNumber = do
+      char '('
+      x <- ignoreSpaces $ char '-' *> vNumber
+      char ')'
+      return (negate x)
+    vPositiveNumber = do
+      x <- T.pack <$> ignoreSpaces (many1 (oneOf ".0123456789"))
       if "." `T.isInfixOf` x
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
+    vNumber = (try vNegativeNumber) <|> (try vPositiveNumber)
     vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
-    vBool = VBool <$> ((string "False" *> return False) <|> (string "True" *> return True))
+    vBool = VBool <$> ((string "False" $> False) <|> (string "True" $> True))
     vRange = do
       VInteger a <- ignoreSpaces (castToInt <$> vNumber)
       ignoreSpaces (string ":")
@@ -262,6 +268,7 @@ builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
+      ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
       ("<=", (Valence 2, HSImpl (\[a, b] -> VBool $ a <= b))),
       ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
       (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),
@@ -305,7 +312,7 @@ builtins =
       -- need applicative style for lists of functions
       -- then fold1 using fanout on input to do fold|f|head|tail
       -- then redefine maximum and minimum in terms of fold1
-      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|-1"))),
+      ("maximum", (Valence 1, CBImpl (compileUnsafe "fold|max|(-1)"))),
       ( "fold",
         ( Valence 3,
           HSImplIO
@@ -319,13 +326,20 @@ builtins =
         )
       ),
       ("fanout", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
-      ( "uncurry2",
+      ( "monadic",
         ( Valence 2,
           HSImplIO
-            ( \[VFunction f, VList args] -> do
-                (VFunction f') <- fromRight' <$> applyF f (args !! 0) BindFromLeft
-                f'' <- fromRight' <$> applyF f' (args !! 1) BindFromLeft
-                return f''
+            ( \[VFunction f, VList args] ->
+                foldlM
+                  ( \v a -> do
+                      case v of
+                        VFunction f -> do
+                          v <- fromRight' <$> applyF f a BindFromLeft
+                          return v
+                        _ -> return v
+                  )
+                  (VFunction f)
+                  args
             )
         )
       ),

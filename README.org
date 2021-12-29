@@ -14,6 +14,7 @@ Solve problems using arrows.
     - Take out every fromRight'
       - Interpreter
       - Parser: when eval'ing
+    - Semigroup / Num instances need full patterns too
     - Resolve every warning in the main code via Left
     - In the builtins, resolve via some short-circuiting VError
     - Then never have the interpreter panic

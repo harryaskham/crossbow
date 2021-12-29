@@ -20,14 +20,14 @@ main = do
   assertEvaluatesTo "zero" "0" (VInteger 0)
   assertEvaluatesTo "zero double" "0.0" (VDouble 0.0)
   assertEvaluatesTo "positive int" "123" (VInteger 123)
-  assertEvaluatesTo "negative int" "-123" (VInteger (-123))
+  assertEvaluatesTo "negative int" "(-123)" (VInteger (-123))
   assertEvaluatesTo "positive double" "1.4" (VDouble 1.4)
-  assertEvaluatesTo "negative double" "-1.4" (VDouble (-1.4))
+  assertEvaluatesTo "negative double" "(-1.4)" (VDouble (-1.4))
   assertEvaluatesTo "addition" "1|+_2" (VInteger 3)
   assertEvaluatesTo "double addition" "1.0|+_2.0" (VDouble 3.0)
   assertEvaluatesTo "int/double addition" "1|+_2.0" (VDouble 3.0)
   assertEvaluatesTo "addition with spaces" "    1 |   +     2  " (VInteger 3)
-  assertEvaluatesTo "add a negative" "1|+_-2" (VInteger (-1))
+  assertEvaluatesTo "add a negative" "1|+_(-2)" (VInteger (-1))
   assertEvaluatesTo "braced list literal" "[1,2,3]" (VList $ VInteger <$> [1, 2, 3])
   assertEvaluatesTo "nested list literal" "[1,[2,3],4]" (VList [VInteger 1, VList [VInteger 2, VInteger 3], VInteger 4])
   assertEvaluatesTo "list concatenation" "[1,2,3]|+_[4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
@@ -59,3 +59,7 @@ main = do
   assertEvaluatesTo "filter without pipes" "filter (_<10) 8:12" (VList $ VInteger <$> [8, 9])
   assertEvaluatesTo "filter forward" "8:12 | filter (_<10) _" (VList $ VInteger <$> [8, 9])
   assertEvaluatesTo "binary functions" "(1+2)" (VInteger 3)
+  assertEvaluatesTo
+    "pairwise sums"
+    "1:4 | fanout 2 _ | [id, drop 1 _] | monadic zip | map sum"
+    (VList $ VInteger <$> [3, 5, 7])

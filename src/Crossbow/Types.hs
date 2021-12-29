@@ -29,6 +29,29 @@ instance Semigroup Value where
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
 
+instance Num Value where
+  (+) = (<>)
+  (VInteger a) * (VInteger b) = (VInteger $ a * b)
+  (VDouble a) * (VDouble b) = (VDouble $ a * b)
+  (VInteger a) * (VDouble b) = (VDouble $ fromIntegral a * b)
+  (VDouble a) * (VInteger b) = (VDouble $ a * fromIntegral b)
+  (VList _) * (VList []) = VList []
+  (VList []) * (VList _) = VList []
+  (VList (a : as)) * (VList (b : bs)) = vCons (a * b) (VList as * VList bs)
+  a * (VList b) = VList ((a *) <$> b)
+  (VList a) * b = VList (a <&> (* b))
+  abs (VInteger a) = VInteger (abs a)
+  abs (VDouble a) = VDouble (abs a)
+  signum a
+    | a == VInteger 0 = 0
+    | a < VInteger 0 = -1
+    | otherwise = 1
+  fromInteger a = VInteger a
+  negate (VInteger a) = VInteger (negate a)
+  negate (VDouble a) = VDouble (negate a)
+  negate (VBool True) = VBool False
+  negate (VBool False) = VBool True
+
 vCons :: Value -> Value -> Value
 vCons a (VList bs) = VList (a : bs)
 vCons _ _ = error "Invalid cons"
