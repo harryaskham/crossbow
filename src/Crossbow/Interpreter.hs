@@ -147,7 +147,12 @@ value =
     -- TODO: Lambdas of more than one variable
     vLambda = do
       char '{'
-      cs <- clauses
+      csIO <- clauses
+      let numArgs = unsafePerformIO do
+            cs <- sequence csIO
+            case mapMaybe maxArgIx cs of
+              [] -> return 0
+              ns -> return $ (L.maximum ns) + 1
       char '}'
       return $
         VFunction
@@ -155,12 +160,11 @@ value =
               Nothing
               ( HSImplIO
                   ( \args -> do
-                      print "running lambda"
-                      let cs' = substituteArgs args <$> cs
-                      runClauses cs'
+                      let csIO' = substituteArgs args <$> csIO
+                      runClauses csIO'
                   )
               )
-              [Unbound] -- TODO: THIS ONLY ALLOWS 1-LAMBDAS
+              (replicate numArgs Unbound)
           )
 
 maxArgIx :: Value -> Maybe Int
@@ -254,7 +258,7 @@ applyF f value bindDir
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
   | null unbound = return $ Left ApplyValenceError
   where
-    unbound = traceShow (f, value) $ getUnbound f
+    unbound = getUnbound f
 
 data CrossbowEvalError = EvalError Text deriving (Show)
 
@@ -363,9 +367,8 @@ builtins =
       ("even", (Valence 1, CBImpl (compileUnsafe "{$0|odd|not}"))),
       ("not", (Valence 1, CBImpl (compileUnsafe "if _ False True"))),
       -- TODO:
-      -- define head, tail
-      -- need applicative style for lists of functions
-      -- then fold1 using fork on input to do fold|f|head|tail
+      -- multiarg lambda
+      -- fold1 using lambda
       -- then redefine maximum and minimum in terms of fold1
       ("maximum", (Valence 1, CBImpl (compileUnsafe "foldl|max|(-1)"))),
       ("length", (Valence 1, CBImpl (compileUnsafe "foldl (flip const (+1) _) 0"))),
@@ -472,7 +475,6 @@ builtins =
         )
       ),
       ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
-      -- TODO: Flip; needs notion of a lambda first
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
       ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
