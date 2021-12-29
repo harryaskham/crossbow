@@ -316,7 +316,7 @@ builtins =
             )
         )
       ),
-      ("aoc", (Valence 1, CBImpl (compileUnsafe "string|(\"/Users/askham/code/advent/2021/input/\"+_)|(_+\".txt\")|read"))),
+      ("aoc", (Valence 1, CBImpl (compileUnsafe "string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read"))),
       ("sum", (Valence 1, CBImpl (compileUnsafe "foldl|+|0"))),
       -- TODO:
       -- define head, tail
