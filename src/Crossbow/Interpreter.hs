@@ -1,5 +1,6 @@
 module Crossbow.Interpreter where
 
+import Control.Monad (foldM)
 import Crossbow.Types
 import Crossbow.Util
 import Data.Either.Extra (fromRight')
@@ -230,8 +231,6 @@ apply (VList bs) (VList as@((VFunction _) : _)) =
 -- If we have a value with a value, just override it
 apply _ v = return v
 
-data ApplyValenceError = ApplyValenceError deriving (Show)
-
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
 bindNext f@(Function t impl args) v bindDir =
@@ -250,13 +249,11 @@ getBound :: Function -> [Argument]
 getBound (Function _ _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
-applyF :: Function -> Value -> BindDir -> IO (Either ApplyValenceError Value)
+applyF :: Function -> Value -> BindDir -> IO (Either CrossbowEvalError Value)
 applyF f value bindDir
-  | length unbound == 1 = do
-    resultE <- evalF (VFunction (bindNext f value bindDir))
-    return $ Right (fromRight' resultE)
+  | length unbound == 1 = evalF (VFunction (bindNext f value bindDir))
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
-  | null unbound = return $ Left ApplyValenceError
+  | null unbound = return $ Left (EvalError "none unbound for the final binding")
   where
     unbound = getUnbound f
 
@@ -280,15 +277,12 @@ evalF vf@(VFunction f@(Function _ impl args))
       HSImpl hsF -> return . Right $ hsF argVals
       HSImplIO hsF -> Right <$> hsF argVals
       CBImpl cbF ->
-        case argVals of
-          [arg] -> do
-            case compile cbF of
-              Left e -> return $ Left (EvalError (show e))
-              Right fIO -> do
-                f <- fIO
-                result <- apply f arg
-                return $ Right result
-          _ -> return . Left $ EvalError "Can only run CB impl monadically"
+        case compile cbF of
+          Left e -> return $ Left (EvalError (show e))
+          Right fIO -> do
+            f <- fIO
+            result <- foldM apply f argVals
+            return $ Right result
   where
     argVals = unbind <$> args
 evalF v = return $ Right v
@@ -325,6 +319,7 @@ builtins =
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
       ("mod", (Valence 2, HSImpl (\[a, b] -> a `mod` b))),
       ("div", (Valence 2, HSImpl (\[a, b] -> a `div` b))),
+      ("==", (Valence 2, HSImpl (\[a, b] -> VBool $ a == b))),
       ("<=", (Valence 2, HSImpl (\[a, b] -> VBool $ a <= b))),
       ("<", (Valence 2, HSImpl (\[a, b] -> VBool $ a < b))),
       (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),
@@ -343,6 +338,9 @@ builtins =
       ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
       ("pairs", (Valence 1, CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}")),
       ("square", (Valence 1, CBImpl "{$0|length|flip fork|$0}")),
+      ("enum", (Valence 1, CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}")),
+      ("lengthy", (Valence 2, CBImpl "{$1|length|($0==_)}")),
+      ("windows", (Valence 2, CBImpl "{$1|square|enum|map (monadic drop)|map (take $0)|filter (lengthy $0)}")),
       -- TODO variadic
       ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
       ( "map",
@@ -356,6 +354,7 @@ builtins =
             )
         )
       ),
+      ("count", (Valence 2, CBImpl "{$1|filter $0|length}")),
       ( "filter",
         ( Valence 2,
           HSImplIO
