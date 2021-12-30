@@ -80,17 +80,17 @@ main = do
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
-    "aoc 1 | lines | int | pairs | count (monadic <)"
+    "aoc 1 | ints | pairs | count (monadic <)"
     (VInteger 1316)
 
   assertEvaluatesTo
     "Day 1 (Part 2)"
-    "aoc 1 | lines | int | windows 3 | map sum | pairs | count (monadic <)"
+    "aoc 1 | ints | windows 3 | map sum | pairs | count (monadic <)"
     (VInteger 1344)
 
   assertEvaluatesTo
     "Day 1 (Both Parts)"
-    "aoc 1 | lines | int | fork 2 | second {windows 3 | map sum} | map {pairs | count (monadic <)}"
+    "aoc 1 | ints | fork 2 | second {windows 3 | map sum} | map {pairs | count (monadic <)}"
     (VList [VInteger 1316, VInteger 1344])
 
 --assertEvaluatesTo "Day 2 (Part 1)" "" (VInteger 1690020)

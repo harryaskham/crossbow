@@ -498,6 +498,7 @@ builtins =
         )
       ),
       ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
+      ("ints", (Valence 1, CBImpl "{lines|int}")),
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
       ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
