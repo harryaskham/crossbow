@@ -346,7 +346,7 @@ builtins =
       ("enum", (Valence 1, CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}")),
       ("lengthy", (Valence 2, CBImpl "{$1|length|($0==_)}")),
       ("windows", (Valence 2, CBImpl "{$1|square|enum|map (monadic drop)|map (take $0)|filter (lengthy $0)}")),
-      ( "apN",
+      ( "nap",
         ( Valence 3,
           HSImplIO
             ( \[VInteger n, VFunction f, VList as] -> do
@@ -357,9 +357,9 @@ builtins =
             )
         )
       ),
-      ("first", (Valence 2, CBImpl "apN 0")),
-      ("second", (Valence 2, CBImpl "apN 1")),
-      ("third", (Valence 2, CBImpl "apN 2")),
+      ("first", (Valence 2, CBImpl "nap 0")),
+      ("second", (Valence 2, CBImpl "nap 1")),
+      ("third", (Valence 2, CBImpl "nap 2")),
       -- TODO variadic
       ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
       ( "map",
