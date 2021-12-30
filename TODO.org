@@ -1,21 +1,14 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] No-arg lambdas assume $0 at the start
+  - [ ] Spaces in lists are allowed
+  - [ ] variadic, inverse function of monadic
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'
       - Interpreter.hs
       - And in parser: when eval'ing
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
-  - [ ] variadic, inverse function of monadic
-    - For this, require monadic to be properly curried
-      - Which requires proper actual currying
-      - e.g. monadic has valence 1, takes a function with any valence, and returns a function with valence 1.
-      - But this new function won't be "findable" by optype?
-        - Solve with Anon optype?
-        - No, because the builtins are where the impls are stored
-        - Instead we should really be storing the Impl inside the function
 - Language features
   - [ ] Program fragments as lambdas
     - Either monadic (args as a list) or variadic (how?)
@@ -25,6 +18,7 @@
   - [ ] Move the standard library to a module system
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [X] No-arg lambdas assume $0 at the start
   - [X] Un-hardcode 1-lambdas and enable $1+
   - [X] Sliding windows for AOC pt2
   - [X] Remove explicit Valence, infer it from the unbound arguments
