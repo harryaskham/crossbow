@@ -318,7 +318,8 @@ passthrough2 name f = (name, (Valence 2, HSImpl (\[a, b] -> f a b)))
 builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
-    [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
+    [ ("+", (Valence 2, HSImpl (\[a, b] -> a + b))),
+      ("++", (Valence 2, HSImpl (\[VList a, VList b] -> VList $ a ++ b))),
       ("*", (Valence 2, HSImpl (\[a, b] -> a * b))),
       ("^", (Valence 2, HSImpl (\[a, b] -> a ^ b))),
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
@@ -388,8 +389,17 @@ builtins =
             )
         )
       ),
+      ( "case",
+        ( Valence 2,
+          HSImpl
+            ( \[a, VList xs] ->
+                let Just v = foldl' (\acc (VList [k, v]) -> if k == a then Just v else acc) Nothing xs
+                 in v
+            )
+        )
+      ),
       ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
-      ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}")),
+      ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"++_)|(_++\".txt\")|read}")),
       ("sum", (Valence 1, CBImpl "foldl|+|0")),
       ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
       ("even", (Valence 1, CBImpl "{$0|odd|not}")),

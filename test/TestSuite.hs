@@ -31,7 +31,7 @@ main = do
   assertEvaluatesTo "add a negative" "1|+_(-2)" (VInteger (-1))
   assertEvaluatesTo "braced list literal" "[1,2,3]" (VList $ VInteger <$> [1, 2, 3])
   assertEvaluatesTo "nested list literal" "[1,[2,3],4]" (VList [VInteger 1, VList [VInteger 2, VInteger 3], VInteger 4])
-  assertEvaluatesTo "list concatenation" "[1,2,3]|+_[4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
+  assertEvaluatesTo "list concatenation" "[1,2,3]|++_[4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
   assertEvaluatesTo "list addition" "[1,2,3]|+_10" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "reverse list addition" "10|+_[1,2,3]" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)
@@ -93,7 +93,12 @@ main = do
     "aoc 1 | ints | fork 2 | second {windows 3 | map sum} | map {pairs | count (monadic <)}"
     (VList [VInteger 1316, VInteger 1344])
 
---assertEvaluatesTo "Day 2 (Part 1)" "" (VInteger 1690020)
+-- Should solve, but the calls to ix inside the lambda are not evaluating down
+--assertEvaluatesTo
+--  "Day 2 (Part 1)"
+--  "aoc 2 | lines | map {words|second int} | foldl {$1|ix 0|ix 0|case _ [['u',[0,ix 1 $1]],['d',[0,ix 1 $1]],['f',[ix 1 $1,0]]]|($0+_)} [0,0]|monadic *"
+--  (VInteger 1690020)
+
 --assertEvaluatesTo "Day 2 (Part 2)" "" (VInteger 1408487760)
 --assertEvaluatesTo "Day 3 (Part 1)" "" (VInteger 3320834)
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)

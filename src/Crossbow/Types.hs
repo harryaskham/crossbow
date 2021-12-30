@@ -33,7 +33,7 @@ instance Semigroup Value where
   (VList as) <> b@(VChar _) = VList (as ++ [b])
   (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
   a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
-  (VList a) <> (VList b) = VList (a ++ b)
+  (VList a) <> (VList b) = VList (getZipList $ (<>) <$> ZipList a <*> ZipList b)
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
 
