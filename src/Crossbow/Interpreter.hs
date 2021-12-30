@@ -368,6 +368,9 @@ builtins =
       ("first", (Valence 2, CBImpl "nap 0")),
       ("second", (Valence 2, CBImpl "nap 1")),
       ("third", (Valence 2, CBImpl "nap 2")),
+      ("fst", (Valence 2, CBImpl "ix 0")),
+      ("snd", (Valence 2, CBImpl "ix 1")),
+      ("thd", (Valence 2, CBImpl "ix 2")),
       -- TODO variadic
       ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
       ( "map",
