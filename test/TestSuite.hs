@@ -93,11 +93,10 @@ main = do
     "aoc 1 | ints | fork 2 | second {windows 3 | map sum} | map {pairs | count (monadic <)}"
     (VList [VInteger 1316, VInteger 1344])
 
--- Should solve, but the calls to ix inside the lambda are not evaluating down
---assertEvaluatesTo
---  "Day 2 (Part 1)"
---  "aoc 2 | lines | map {words|second int} | foldl {$1|ix 0|ix 0|case _ [['u',[0,ix 1 $1]],['d',[0,ix 1 $1]],['f',[ix 1 $1,0]]]|($0+_)} [0,0]|monadic *"
---  (VInteger 1690020)
+  assertEvaluatesTo
+    "Day 2 (Part 1)"
+    "aoc 2 | lines | map {words|second int|first (ix 0)} | fork 3 | [filter {ix 0|=='f'}, filter {ix 0|=='u'}, filter {ix 0|=='d'}] | map {map (ix 1)|sum} | fork 2 | [head,tail] | second (monadic flip -) | monadic *"
+    (VInteger 1690020)
 
 --assertEvaluatesTo "Day 2 (Part 2)" "" (VInteger 1408487760)
 --assertEvaluatesTo "Day 3 (Part 1)" "" (VInteger 3320834)

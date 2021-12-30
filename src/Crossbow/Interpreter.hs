@@ -15,6 +15,7 @@ import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
 import Data.Vector.Fusion.Stream.Monadic (foldl1M')
+import GHC.ExecutionStack (Location (functionName))
 import GHC.IO.Unsafe (unsafeInterleaveIO, unsafePerformIO)
 import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
@@ -167,7 +168,12 @@ value =
               ( HSImplIO
                   ( \args -> do
                       let csIO' = substituteArgs args <$> csIOWithInitial
-                      runClauses csIO'
+                      v <- runClauses csIO'
+                      -- If our lambda resulted in a fully bound function
+                      -- We need to evaluate it down here
+                      case v of
+                        VFunction _ -> fromRight' <$> evalF v
+                        _ -> return v
                   )
               )
               (replicate (max 1 numArgs) Unbound)
