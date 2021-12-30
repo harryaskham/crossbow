@@ -330,12 +330,13 @@ builtins =
       (">=", (Valence 2, HSImpl (\[a, b] -> VBool $ a >= b))),
       (">", (Valence 2, HSImpl (\[a, b] -> VBool $ a > b))),
       (":", (Valence 2, HSImpl (\[a, b] -> vCons a b))),
-      ("cons", (Valence 2, HSImpl (\[a, b] -> vCons a b))),
       passthrough2 "max" max,
       passthrough2 "min" min,
       -- TODO: Redefine all the below using crossbow folds, maps, filters
       ("id", (Valence 1, HSImpl (\[a] -> a))),
       ("const", (Valence 2, HSImpl (\[a, _] -> a))),
+      ("cons", (Valence 2, HSImpl (\[a, b] -> vCons a b))),
+      ("ix", (Valence 2, HSImpl (\[VInteger a, VList b] -> b !! fromInteger a))),
       ("drop", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (drop (fromIntegral n) as)))),
       ("take", (Valence 2, HSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
       ("head", (Valence 1, HSImpl (\[VList as] -> L.head as))),
@@ -498,6 +499,7 @@ builtins =
         )
       ),
       ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
+      ("words", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.words (unchar <$> t)))))),
       ("ints", (Valence 1, CBImpl "{lines|int}")),
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
