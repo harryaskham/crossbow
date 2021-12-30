@@ -98,7 +98,7 @@ value =
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
     vNumber = try vNegativeNumber <|> try vPositiveNumber
-    vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
+    vList = VList <$> between (char '[') (char ']') (value `sepBy` (ignoreSpaces $ char ','))
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
     vBool = VBool <$> (string "False" $> False <|> string "True" $> True)
