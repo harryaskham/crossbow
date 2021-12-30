@@ -73,10 +73,10 @@ main = do
   assertEvaluatesTo "not true" "not True" (VBool False)
   assertEvaluatesTo "evens" "1:10|filter even" (VList $ VInteger <$> [2, 4, 6, 8, 10])
   assertEvaluatesTo "multivariable lambda" "{$0|(_+$1)|(_*$2)}|1|2|3" (VInteger 9)
-  assertEvaluatesTo "enumeration" "enum 1:3" (VList $ [VList [VInteger 0, VInteger 1], VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
+  assertEvaluatesTo "enumeration" "enum 1:3" (VList [VList [VInteger 0, VInteger 1], VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "lengthy" "lengthy 3 1:3" (VBool True)
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
-  assertEvaluatesTo "windows" "windows 2 1:3" (VList $ [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
+  assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
@@ -87,6 +87,11 @@ main = do
     "Day 1 (Part 2)"
     "aoc 1 | lines | int | windows 3 | map sum | pairs | count (monadic <)"
     (VInteger 1344)
+
+  assertEvaluatesTo
+    "Day 1 (Both Parts)"
+    "aoc 1 | lines | int | fork 2 | second {windows 3 | map sum} | map {pairs | count (monadic <)}"
+    (VList [VInteger 1316, VInteger 1344])
 
 --assertEvaluatesTo "Day 2 (Part 1)" "" (VInteger 1690020)
 --assertEvaluatesTo "Day 2 (Part 2)" "" (VInteger 1408487760)

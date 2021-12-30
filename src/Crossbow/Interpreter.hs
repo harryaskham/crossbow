@@ -13,6 +13,7 @@ import Data.String qualified
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
+import Data.Vector qualified as V
 import Data.Vector.Fusion.Stream.Monadic (foldl1M')
 import GHC.IO.Unsafe (unsafeInterleaveIO, unsafePerformIO)
 import Text.ParserCombinators.Parsec (ParseError)
@@ -145,7 +146,8 @@ value =
           vFuncBin,
           vFunc
         ]
-    -- TODO: Lambdas of more than one variable
+    -- Lambdas!
+    -- If lambda has no argument, we assume it is preceded by $0
     vLambda = do
       char '{'
       csIO <- clauses
@@ -154,6 +156,9 @@ value =
             case mapMaybe maxArgIx cs of
               [] -> return 0
               ns -> return $ L.maximum ns + 1
+      let csIOWithInitial = case numArgs of
+            0 -> (pure $ VIdentifier "$0") : csIO
+            _ -> csIO
       char '}'
       return $
         VFunction
@@ -161,11 +166,11 @@ value =
               Nothing
               ( HSImplIO
                   ( \args -> do
-                      let csIO' = substituteArgs args <$> csIO
+                      let csIO' = substituteArgs args <$> csIOWithInitial
                       runClauses csIO'
                   )
               )
-              (replicate numArgs Unbound)
+              (replicate (max 1 numArgs) Unbound)
           )
 
 maxArgIx :: Value -> Maybe Int
@@ -341,6 +346,20 @@ builtins =
       ("enum", (Valence 1, CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}")),
       ("lengthy", (Valence 2, CBImpl "{$1|length|($0==_)}")),
       ("windows", (Valence 2, CBImpl "{$1|square|enum|map (monadic drop)|map (take $0)|filter (lengthy $0)}")),
+      ( "apN",
+        ( Valence 3,
+          HSImplIO
+            ( \[VInteger n, VFunction f, VList as] -> do
+                let vas = V.fromList as
+                a' <- fromRight' <$> applyF f (vas V.! fromInteger n) BindFromLeft
+                let vas' = vas V.// [(fromInteger n, a')]
+                return (VList $ V.toList vas')
+            )
+        )
+      ),
+      ("first", (Valence 2, CBImpl "apN 0")),
+      ("second", (Valence 2, CBImpl "apN 1")),
+      ("third", (Valence 2, CBImpl "apN 2")),
       -- TODO variadic
       ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
       ( "map",
