@@ -48,7 +48,7 @@ clauses :: P [IO Value]
 clauses = (pure <$> value) `sepBy1` clauseDivider
 
 runClauses :: [IO Value] -> IO Value
-runClauses (c : cs) = do
+runClauses (c : cs) =
   foldl'
     ( \vIO cIO -> do
         v <- vIO
@@ -60,8 +60,7 @@ runClauses (c : cs) = do
 
 program :: P (IO Value)
 program = do
-  cs <- clauses
-  return $ runClauses cs
+  runClauses <$> clauses
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
@@ -95,11 +94,11 @@ value =
       if "." `T.isInfixOf` x
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
-    vNumber = (try vNegativeNumber) <|> (try vPositiveNumber)
+    vNumber = try vNegativeNumber <|> try vPositiveNumber
     vList = VList <$> between (char '[') (char ']') (value `sepBy` char ',')
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
-    vBool = VBool <$> ((string "False" $> False) <|> (string "True" $> True))
+    vBool = VBool <$> (string "False" $> False <|> string "True" $> True)
     -- TODO: Ranges can also be over variables
     vRange = do
       VInteger a <- ignoreSpaces (castToInt <$> vNumber)
@@ -115,7 +114,7 @@ value =
           Left e -> fail (show e)
           Right v -> return v
       | otherwise = return $ VFunction f
-    arg = ignoreSpaces $ ((Bound <$> value) <|> (char '_' $> Unbound))
+    arg = ignoreSpaces ((Bound <$> value) <|> (char '_' $> Unbound))
     vFuncBin =
       do
         char '('
@@ -153,7 +152,7 @@ value =
             cs <- sequence csIO
             case mapMaybe maxArgIx cs of
               [] -> return 0
-              ns -> return $ (L.maximum ns) + 1
+              ns -> return $ L.maximum ns + 1
       char '}'
       return $
         VFunction
@@ -170,7 +169,7 @@ value =
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
-maxArgIx (VFunction f@(Function _ _ _)) =
+maxArgIx (VFunction f@(Function {})) =
   case mapMaybe maxArgIx $ unbind <$> getBound f of
     [] -> Nothing
     ixs -> Just $ L.maximum ixs
@@ -192,7 +191,7 @@ mkFuncL (Operator (OpType t) (Valence v)) args
 operator :: P Operator
 operator = ignoreSpaces $ do
   -- We parse in favour of longer names first to avoid max/maximum clashes
-  k <- T.pack <$> firstOf (string . T.unpack <$> (sortOn (Down . T.length) (M.keys builtins)))
+  k <- T.pack <$> firstOf (string . T.unpack <$> sortOn (Down . T.length) (M.keys builtins))
   let (v, _) = builtins M.! k
   return $ Operator (OpType k) v
 
@@ -322,6 +321,7 @@ builtins =
   M.fromList
     [ ("+", (Valence 2, HSImpl (\[a, b] -> a <> b))),
       ("*", (Valence 2, HSImpl (\[a, b] -> a * b))),
+      ("^", (Valence 2, HSImpl (\[a, b] -> a ^ b))),
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
       ("mod", (Valence 2, HSImpl (\[a, b] -> a `mod` b))),
       ("div", (Valence 2, HSImpl (\[a, b] -> a `div` b))),
@@ -341,7 +341,10 @@ builtins =
       ("head", (Valence 1, HSImpl (\[VList as] -> L.head as))),
       ("tail", (Valence 1, HSImpl (\[VList as] -> VList $ L.tail as))),
       ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
-      ("pairs", (Valence 1, CBImpl ("{$0|fork 2|[id, drop 1]|monadic zip}"))),
+      ("pairs", (Valence 1, CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}")),
+      ("square", (Valence 1, CBImpl "{$0|length|flip fork|$0}")),
+      -- TODO variadic
+      ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
       ( "map",
         ( Valence 2,
           HSImplIO
@@ -367,17 +370,17 @@ builtins =
         )
       ),
       ("if", (Valence 3, HSImpl (\[VBool p, a, b] -> if p then a else b))),
-      ("aoc", (Valence 1, CBImpl ("{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}"))),
-      ("sum", (Valence 1, CBImpl ("foldl|+|0"))),
-      ("odd", (Valence 1, CBImpl ("{$0|mod _ 2|bool}"))),
-      ("even", (Valence 1, CBImpl ("{$0|odd|not}"))),
-      ("not", (Valence 1, CBImpl ("if _ False True"))),
+      ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"+_)|(_+\".txt\")|read}")),
+      ("sum", (Valence 1, CBImpl "foldl|+|0")),
+      ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
+      ("even", (Valence 1, CBImpl "{$0|odd|not}")),
+      ("not", (Valence 1, CBImpl "if _ False True")),
       -- TODO:
       -- multiarg lambda
       -- fold1 using lambda
       -- then redefine maximum and minimum in terms of fold1
-      ("maximum", (Valence 1, CBImpl ("foldl|max|(-1)"))),
-      ("length", (Valence 1, CBImpl ("foldl (flip const (+1) _) 0"))),
+      ("maximum", (Valence 1, CBImpl "foldl|max|(-1)")),
+      ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),
       ( "foldl",
         ( Valence 3,
           HSImplIO
@@ -385,8 +388,7 @@ builtins =
                 foldlM
                   ( \acc x -> do
                       (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
-                      acc' <- fromRight' <$> applyF f' x BindFromLeft
-                      return acc'
+                      fromRight' <$> applyF f' x BindFromLeft
                   )
                   acc
                   xs
@@ -401,8 +403,7 @@ builtins =
                 foldrM
                   ( \acc x -> do
                       (VFunction f') <- fromRight' <$> applyF f acc BindFromLeft
-                      acc' <- fromRight' <$> applyF f' x BindFromLeft
-                      return acc'
+                      fromRight' <$> applyF f' x BindFromLeft
                   )
                   acc
                   xs
@@ -452,7 +453,7 @@ builtins =
             )
         )
       ),
-      ("reverse", (Valence 1, CBImpl ("foldl (flip cons) [] _"))),
+      ("reverse", (Valence 1, CBImpl "foldl (flip cons) [] _")),
       ( "ap",
         ( Valence 2,
           HSImplIO
@@ -470,8 +471,7 @@ builtins =
                   ( \v a -> do
                       case v of
                         VFunction f -> do
-                          v <- fromRight' <$> applyF f a BindFromLeft
-                          return v
+                          fromRight' <$> applyF f a BindFromLeft
                         _ -> return v
                   )
                   (VFunction f)
