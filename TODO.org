@@ -1,7 +1,6 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Spaces in lists are allowed
   - [ ] variadic, inverse function of monadic
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'
@@ -10,14 +9,15 @@
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
 - Language features
-  - [ ] Program fragments as lambdas
-    - Either monadic (args as a list) or variadic (how?)
-    - Allow parsing subprograms in parens
   - [ ] Let bindings
   - [ ] Lexical scoping
   - [ ] Move the standard library to a module system
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [X] Program fragments as lambdas
+    - Either monadic (args as a list) or variadic (how?)
+    - Allow parsing subprograms in parens
+  - [X] Spaces in lists are allowed
   - [X] No-arg lambdas assume $0 at the start
   - [X] Un-hardcode 1-lambdas and enable $1+
   - [X] Sliding windows for AOC pt2

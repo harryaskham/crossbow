@@ -95,7 +95,7 @@ main = do
 
   assertEvaluatesTo
     "Day 2 (Part 1)"
-    "aoc 2 | lines | map {words|second int|first (ix 0)} | fork 3 | [filter {ix 0|=='f'}, filter {ix 0|=='u'}, filter {ix 0|=='d'}] | map {map (ix 1)|sum} | fork 2 | [head,tail] | second (monadic flip -) | monadic *"
+    "aoc 2 | lines | map {words|second int|first (ix 0)} | fork 3 | [filter {ix 0|=='f'}, filter {ix 0|=='d'}, filter {ix 0|=='u'}] | map {map (ix 1)|sum} | fork 2 | [head,tail] | second (monadic -) | monadic *"
     (VInteger 1690020)
 
 --assertEvaluatesTo "Day 2 (Part 2)" "" (VInteger 1408487760)
