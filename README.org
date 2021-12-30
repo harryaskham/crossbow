@@ -10,7 +10,7 @@ Solve problems using [[https://en.wikipedia.org/wiki/Morphism][arrows]].
 
 [[example.png]]
 
-/Solving the first day of Advent of Code 2021 using Crossbow/
+/Solving the first day of Advent of Code 2021 two ways using Crossbow/
 
 * Features
 
