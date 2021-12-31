@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Implement strictness properly; we are not evaluating our arguments while binding
   - [ ] variadic, inverse function of monadic
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'

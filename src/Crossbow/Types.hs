@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+
 module Crossbow.Types where
 
 import Crossbow.Util
@@ -59,6 +61,8 @@ instance Num Value where
   negate (VDouble a) = VDouble (negate a)
   negate (VBool True) = VBool False
   negate (VBool False) = VBool True
+  negate (VList as) = VList (negate <$> as)
+  negate f@(VFunction _) = error $ "TODO: negating a function: " <> show f
 
 instance Integral Value where
   quotRem a b =

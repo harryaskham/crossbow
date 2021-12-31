@@ -54,9 +54,17 @@ runClauses :: [IO Value] -> IO Value
 runClauses (c : cs) =
   foldl'
     ( \vIO cIO -> do
+        -- Enforce strictness: deeply evaluate both function and arg values before applying
+        -- TODO: This made things pretty slow, is this really needed?
         v <- vIO
         c <- cIO
         apply v c
+        {-
+        deepC <- deepEval c
+        case deepC of
+          Left e -> error $ "Error deepening RHS: " <> show e
+          Right deepC -> apply v deepC
+        -}
     )
     c
     cs
@@ -113,7 +121,7 @@ value =
     -- TODO: Change this to a P (IO Value)
     maybeApply f
       | null (getUnbound f) =
-        case unsafePerformIO $ evalF (VFunction f) of
+        case unsafePerformIO $ deepEval (VFunction f) of
           Left e -> fail (show e)
           Right v -> return v
       | otherwise = return $ VFunction f
@@ -170,10 +178,9 @@ value =
                       let csIO' = substituteArgs args <$> csIOWithInitial
                       v <- runClauses csIO'
                       -- If our lambda resulted in a fully bound function
+                      -- Or e.g. a list of fully bound things
                       -- We need to evaluate it down here
-                      case v of
-                        VFunction _ -> fromRight' <$> evalF v
-                        _ -> return v
+                      fromRight' <$> deepEval v
                   )
               )
               (replicate (max 1 numArgs) Unbound)
@@ -262,7 +269,7 @@ getBound (Function _ _ args) = filter (/= Unbound) args
 -- Either partially bind this value, or if it's fully applied, evaluate it down
 applyF :: Function -> Value -> BindDir -> IO (Either CrossbowEvalError Value)
 applyF f value bindDir
-  | length unbound == 1 = evalF (VFunction (bindNext f value bindDir))
+  | length unbound == 1 = deepEval (VFunction (bindNext f value bindDir))
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
   | null unbound = return $ Left (EvalError "none unbound for the final binding")
   where
@@ -278,22 +285,26 @@ isIdentifier :: Value -> Bool
 isIdentifier (VIdentifier _) = True
 isIdentifier _ = False
 
+runCBImpl :: Text -> [Value] -> IO (Either CrossbowEvalError Value)
+runCBImpl cbF argVals = do
+  case compile cbF of
+    Left e -> return $ Left (EvalError (show e))
+    Right fIO -> do
+      f <- fIO
+      result <- foldM apply f argVals
+      return $ Right result
+
 evalF :: Value -> IO (Either CrossbowEvalError Value)
 evalF vf@(VFunction f@(Function _ impl args))
-  | not (null $ getUnbound f) = return . Left $ EvalError "Can't evaluate with unbound variables"
-  -- If we have any unbound variables we can't eval down any further
+  -- If we're not fully bound, this is as far as we can go
+  | not (null $ getUnbound f) = return $ Right vf
+  -- If we have any bound identifier variables variables we can't eval down any further either
   | any isIdentifier argVals = return $ Right vf
   | otherwise =
     case impl of
       HSImpl hsF -> return . Right $ hsF argVals
       HSImplIO hsF -> Right <$> hsF argVals
-      CBImpl cbF ->
-        case compile cbF of
-          Left e -> return $ Left (EvalError (show e))
-          Right fIO -> do
-            f <- fIO
-            result <- foldM apply f argVals
-            return $ Right result
+      CBImpl cbF -> runCBImpl cbF argVals
   where
     argVals = unbind <$> args
 evalF v = return $ Right v
@@ -317,6 +328,13 @@ substituteArgs subs vIO = do
     substituteBoundArg _ Unbound = return Unbound
     substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
 
+deepEval :: Value -> IO (Either CrossbowEvalError Value)
+deepEval f@(VFunction _) = evalF f
+deepEval (VList as) = do
+  as <- traverse deepEval as
+  return . fmap VList $ sequence as
+deepEval v = return $ Right v
+
 -- Helper to pass through a Haskell function to the builtins
 passthrough2 :: Text -> (Value -> Value -> Value) -> (Text, (Valence, OpImpl))
 passthrough2 name f = (name, (Valence 2, HSImpl (\[a, b] -> f a b)))
@@ -329,6 +347,7 @@ builtins =
       ("*", (Valence 2, HSImpl (\[a, b] -> a * b))),
       ("^", (Valence 2, HSImpl (\[a, b] -> a ^ b))),
       ("-", (Valence 2, HSImpl (\[a, b] -> a - b))),
+      ("negate", (Valence 1, HSImpl (\[a] -> negate a))),
       ("mod", (Valence 2, HSImpl (\[a, b] -> a `mod` b))),
       ("div", (Valence 2, HSImpl (\[a, b] -> a `div` b))),
       ("==", (Valence 2, HSImpl (\[a, b] -> VBool $ a == b))),
@@ -414,8 +433,7 @@ builtins =
       ("even", (Valence 1, CBImpl "{$0|odd|not}")),
       ("not", (Valence 1, CBImpl "if _ False True")),
       -- TODO:
-      -- multiarg lambda
-      -- fold1 using lambda
+      -- fold1 using lambda with head, tail
       -- then redefine maximum and minimum in terms of fold1
       ("maximum", (Valence 1, CBImpl "foldl|max|(-1)")),
       ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),

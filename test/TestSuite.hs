@@ -98,7 +98,13 @@ main = do
     "aoc 2 | lines | map {words|second int|first fst} | fork 3 | [filter {fst|=='f'}, filter {fst|=='d'}, filter {fst|=='u'}] | map {map snd|sum} | fork 2 | [head,tail] | second (monadic -) | monadic *"
     (VInteger 1690020)
 
---assertEvaluatesTo "Day 2 (Part 2)" "" (VInteger 1408487760)
+{-
+  assertEvaluatesTo
+    "Day 2 (Part 2)"
+    "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]}"
+    (VInteger 1408487760)
+-}
+
 --assertEvaluatesTo "Day 3 (Part 1)" "" (VInteger 3320834)
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
