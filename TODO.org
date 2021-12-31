@@ -2,6 +2,7 @@
 
 - Do Next
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
+    - Negate shoudl not be called on a function; somehow we're not substituting properly
   - [ ] variadic, inverse function of monadic
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight'

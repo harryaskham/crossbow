@@ -94,8 +94,13 @@ main = do
     (VList [VInteger 1316, VInteger 1344])
 
   assertEvaluatesTo
-    "Day 2 (Part 1)"
+    "Day 2 (Part 1) 1"
     "aoc 2 | lines | map {words|second int|first fst} | fork 3 | [filter {fst|=='f'}, filter {fst|=='d'}, filter {fst|=='u'}] | map {map snd|sum} | fork 2 | [head,tail] | second (monadic -) | monadic *"
+    (VInteger 1690020)
+
+  assertEvaluatesTo
+    "Day 2 (Part 1) 2"
+    "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u',[0,0,ix 1 $0]],['d',[0,ix 1 $0,0]],['f',[ix 1 $0,0,0]]]} | sum | fork 2 | [head, tail] | second (monadic -) | monadic *"
     (VInteger 1690020)
 
 {-
