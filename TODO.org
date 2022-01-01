@@ -1,14 +1,14 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Remove all partial functions to stop interpreter crashes:
-    - Take out every fromRight', unsafePerformIO, error, and fail
-    - Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
-    - Informative error messages including Program context at time of crash
-    - Semigroup / Num instances for Value need exhaustive patterns
+  - [-] Remove all partial functions to stop interpreter crashes:
+    - [-] Take out every:
+      - [ ] fromRight'
+      - [X] unsafePerformIO
+    - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
+    - [ ] Exhausive Semigroup
+    - [X] Exhaustive Num
     - Builtin functions fail gracefully
-    - Custom Num and Semigroup classes for Value which can host informative errors
-      - e.g. where every function can fail gracefully
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
     - Negate shoudl not be called on a function; somehow we're not substituting properly
   - [ ] variadic, inverse function of monadic
@@ -18,6 +18,7 @@
   - [ ] Move the standard library to a module system
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [ ] Stack trace
   - [ ] range syntax with variable endpoints
   - [X] Program fragments as lambdas
     - Either monadic (args as a list) or variadic (how?)
