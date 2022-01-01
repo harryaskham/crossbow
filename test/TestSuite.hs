@@ -78,7 +78,6 @@ main = do
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
 
-{-
   assertEvaluatesTo
     "Day 1 (Part 1)"
     "aoc 1 | ints | pairs | count (monadic <)"
@@ -103,7 +102,6 @@ main = do
     "Day 2 (Part 1) 2"
     "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u',[0,0,ix 1 $0]],['d',[0,ix 1 $0,0]],['f',[ix 1 $0,0,0]]]} | sum | fork 2 | [head, tail] | second (monadic -) | monadic *"
     (VInteger 1690020)
--}
 
 {-
   assertEvaluatesTo
