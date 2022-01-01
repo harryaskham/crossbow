@@ -51,30 +51,51 @@ instance Semigroup Value where
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
 
+-- TODO: Need our own
 instance Num Value where
   (+) = (<>)
-  (VInteger a) * (VInteger b) = (VInteger $ a * b)
-  (VDouble a) * (VDouble b) = (VDouble $ a * b)
-  (VInteger a) * (VDouble b) = (VDouble $ fromIntegral a * b)
-  (VDouble a) * (VInteger b) = (VDouble $ a * fromIntegral b)
+  (VInteger a) * (VInteger b) = VInteger $ a * b
+  (VInteger a) * (VDouble b) = VDouble $ fromIntegral a * b
+  (VInteger _) * (VChar _) = error "Cannot multiply Integer and Char"
+  (VInteger _) * (VBool _) = error "Cannot multiply Integer and Bool"
+  (VInteger _) * (VFunction _) = error "Cannot multiply Integer and unevaluated function"
+  (VInteger _) * (VIdentifier _) = error "Cannot multiply Integer and unbound identifier"
+  (VDouble a) * (VDouble b) = VDouble $ a * b
+  (VDouble a) * (VInteger b) = VDouble $ a * fromIntegral b
+  (VDouble _) * (VChar _) = error "Cannot multiply Double and Char"
+  (VDouble _) * (VBool _) = error "Cannot multiply Double and Bool"
+  (VDouble _) * (VFunction _) = error "Cannot multiply Double and unevaluated function"
+  (VDouble _) * (VIdentifier _) = error "Cannot multiply Double and unbound identifier"
   (VList _) * (VList []) = VList []
   (VList []) * (VList _) = VList []
   (VList (a : as)) * (VList (b : bs)) = vCons (a * b) (VList as * VList bs)
   a * (VList b) = VList ((a *) <$> b)
   (VList a) * b = VList (a <&> (* b))
+  (VBool _) * _ = error "Cannot multiply Bool"
+  (VChar _) * _ = error "Cannot multiply Char"
+  (VFunction f) * _ = error $ "Cannot multiply unevaluated function: " <> show f
+  (VIdentifier i) * _ = error $ "Cannot multiply an unbound identifier: " <> i
   abs (VInteger a) = VInteger (abs a)
   abs (VDouble a) = VDouble (abs a)
-  signum a
-    | a == VInteger 0 = 0
-    | a < VInteger 0 = -1
+  abs (VList as) = VList (abs <$> as)
+  abs (VChar a) = error "Cannot abs a Char"
+  abs (VBool a) = error "Cannot abs a Bool"
+  abs (VFunction f) = error $ "Cannot abs an unevaluated function: " <> show f
+  abs (VIdentifier i) = error $ "Cannot abs an unbound identifier: " <> i
+  signum (VInteger a)
+    | a == 0 = 0
+    | a < 0 = -1
     | otherwise = 1
+  signum a = signum (castToInt a)
   fromInteger a = VInteger a
   negate (VInteger a) = VInteger (negate a)
   negate (VDouble a) = VDouble (negate a)
   negate (VBool True) = VBool False
   negate (VBool False) = VBool True
   negate (VList as) = VList (negate <$> as)
-  negate f@(VFunction _) = error $ "TODO: negating a function: " <> show f
+  negate (VChar _) = error "Cannot negate a Char"
+  negate f@(VFunction _) = error $ "Cannot negate an unevaluated function: " <> show f
+  negate (VIdentifier i) = error $ "Cannot negate an unbound identifier: " <> i
 
 instance Integral Value where
   quotRem a b =

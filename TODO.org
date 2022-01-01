@@ -6,6 +6,8 @@
     - Informative error messages including Program context at time of crash
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
+    - Custom Num and Semigroup classes for Value which can host informative errors
+      - e.g. where every function can fail gracefully
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
     - Negate shoudl not be called on a function; somehow we're not substituting properly
   - [ ] variadic, inverse function of monadic
