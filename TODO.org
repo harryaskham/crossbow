@@ -1,15 +1,16 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Implement strictness properly; we are not evaluating our arguments while binding
-    - Negate shoudl not be called on a function; somehow we're not substituting properly
-  - [ ] variadic, inverse function of monadic
   - [ ] Remove all partial functions to stop interpreter crashes:
+    - Informative error messages including Program context at time of crash
     - Take out every fromRight'
       - Interpreter.hs
       - And in parser: when eval'ing
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
+  - [ ] Implement strictness properly; we are not evaluating our arguments while binding
+    - Negate shoudl not be called on a function; somehow we're not substituting properly
+  - [ ] variadic, inverse function of monadic
 - Language features
   - [ ] Let bindings
   - [ ] Lexical scoping
