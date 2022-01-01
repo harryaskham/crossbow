@@ -39,19 +39,20 @@ instance Enum Value where
 
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
-  (VDouble a) <> (VDouble b) = VDouble (a + b)
   (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
+  a@(VInteger _) <> b = a <> castToInt b
+  (VDouble a) <> (VDouble b) = VDouble (a + b)
   (VDouble a) <> (VInteger b) = VDouble (a + fromIntegral b)
+  a@(VDouble _) <> b = a <> castToDouble b
   (VChar a) <> (VChar b) = VChar (chr $ ord a + ord b)
   a@(VChar _) <> (VList bs) = VList (a : bs)
-  (VList as) <> b@(VChar _) = VList (as ++ [b])
   (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
+  (VList as) <> b@(VChar _) = VList (as ++ [b])
   a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
   (VList a) <> (VList b) = VList (getZipList $ (<>) <$> ZipList a <*> ZipList b)
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
 
--- TODO: Need our own
 instance Num Value where
   (+) = (<>)
   (VInteger a) * (VInteger b) = VInteger $ a * b
@@ -140,7 +141,7 @@ castToInt v@(VList vs)
     VInteger (fst . fromRight' $ (TR.signed TR.decimal) (asText v))
   | otherwise = VList (castToInt <$> vs)
 castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
-castToInt (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
+castToInt (VBool b) = VInteger (fromIntegral $ fromEnum b)
 
 castToDouble :: Value -> Value
 castToDouble v@(VDouble _) = v
