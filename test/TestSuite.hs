@@ -51,6 +51,7 @@ main = do
   assertEvaluatesTo "fold over list" "foldl | + | 0 | [1,2,3]" (VInteger 6)
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
+  assertEvaluatesTo "minimum" "[1,3,2]|maximum" (VInteger 1)
   assertEvaluatesTo "fans out" "1 | fork 4 _" (VList $ VInteger <$> [1, 1, 1, 1])
   assertEvaluatesTo "converts string to int" "\"123\"|int" (VInteger 123)
   assertEvaluatesTo "drops" "1:10 | drop 6 _" (VList $ VInteger <$> [7, 8, 9, 10])
@@ -78,6 +79,8 @@ main = do
   assertEvaluatesTo "lengthy" "lengthy 3 1:3" (VBool True)
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
+  assertEvaluatesTo "foldl1" "foldl1 (+) [1,2,3]" (VInteger 6)
+  assertEvaluatesTo "foldr1" "foldr1 (+) [1,2,3]" (VInteger 6)
 
   assertEvaluatesTo
     "Day 1 (Part 1)"

@@ -259,7 +259,8 @@ builtins =
       -- TODO:
       -- fold1 using lambda with head, tail
       -- then redefine maximum and minimum in terms of fold1
-      ("maximum", (Valence 1, CBImpl "foldl|max|(-1)")),
+      ("maximum", (Valence 1, CBImpl "foldl1 max")),
+      ("minimum", (Valence 1, CBImpl "foldl1 min")),
       ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),
       ( "foldl",
         ( Valence 3,
@@ -322,6 +323,10 @@ builtins =
             )
         )
       ),
+      ("foldl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldl $0)}")),
+      ("foldr1", (Valence 2, CBImpl "{foldr $0 (head $1) (tail $1)}")),
+      ("scanl1", (Valence 2, CBImpl "{scanl $0 (head $1) (tail $1)}")),
+      ("scanr1", (Valence 2, CBImpl "{scanr $0 (head $1) (tail $1)}")),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
