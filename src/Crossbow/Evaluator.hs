@@ -27,7 +27,6 @@ compileUnsafe programParser p = do
   pE <- compile programParser p
   return $ fromRight' pE
 
--- TODO: Perhaps need deepEval here to enforce strictness
 runClauses :: P [IO Value] -> [IO Value] -> IO (Either CrossbowError Value)
 runClauses _ [] = return (Left EmptyProgramError)
 -- We might first start with a fully bound clause, so ensure that one is deeply eval'd before moving on
@@ -93,12 +92,16 @@ getBound (Function _ _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
 applyF :: P [IO Value] -> Function -> Value -> BindDir -> IO (Either CrossbowError Value)
-applyF programParser f value bindDir
-  | length unbound == 1 = deepEval programParser (VFunction (bindNext f value bindDir))
-  | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
-  | null unbound = return $ Left (EvalError "none unbound for the final binding")
-  where
-    unbound = getUnbound f
+applyF programParser f v bindDir = do
+  let unbound = getUnbound f
+  strictV <- deepEval programParser v
+  case strictV of
+    Left e -> return $ Left e
+    Right strictV ->
+      if
+          | length unbound == 1 -> deepEval programParser (VFunction (bindNext f strictV bindDir))
+          | length unbound > 1 -> return . Right $ VFunction (bindNext f strictV bindDir)
+          | otherwise -> return . Left $ EvalError $ "Attempting to bind a fully bound function: " <> show (f, strictV)
 
 unbind :: Argument -> Value
 unbind (Bound v) = v
@@ -150,8 +153,19 @@ substituteArgs subs vIO = do
     substituteBoundArg _ Unbound = return Unbound
     substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
 
+deepEvalArg :: P [IO Value] -> Argument -> IO (Either CrossbowError Argument)
+deepEvalArg programParser (Bound v) = Bound <$$> deepEval programParser v
+deepEvalArg _ Unbound = return . return $ Unbound
+
+-- Deeply evaluate the given value.
+-- Ensure if this is a function that all arguments are strictly evaluated.
 deepEval :: P [IO Value] -> Value -> IO (Either CrossbowError Value)
-deepEval programParser f@(VFunction _) = evalF programParser f
+deepEval programParser (VFunction (Function name impl args)) =
+  do
+    (errors, argsStrict) <- partitionEithers <$> traverse (deepEvalArg programParser) args
+    if not (null errors)
+      then return . Left $ L.head errors
+      else evalF programParser (VFunction (Function name impl argsStrict))
 deepEval programParser (VList as) = do
   as <- traverse (deepEval programParser) as
   return . fmap VList $ sequence as
@@ -324,6 +338,7 @@ builtins =
         )
       ),
       ("foldl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldl $0)}")),
+      ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
       -- TODO: broken> ("foldr1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldr $0)}")),
       -- TODO: Make flip work with other valences
       ( "flip",

@@ -21,6 +21,7 @@
 - Language features
   - [ ] variadic, inverse function of monadic
   - [ ] Let bindings
+  - [ ] Binary with no args is repl, with args runs a source file
   - [ ] Lexical scoping
   - [ ] Move the standard library to a module system
   - [ ] Named function definition

@@ -80,7 +80,7 @@ main = do
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "foldl1" "[1,2,3]|foldl1|+" (VInteger 6)
-  -- assertEvaluatesTo "foldr1" "[1,2,3]|foldr1|+" (VInteger 6) broke
+  assertEvaluatesTo "scanl1" "[1,2,3]|scanl1|+" (VList $ VInteger <$> [1, 3, 6])
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
