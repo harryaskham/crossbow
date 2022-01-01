@@ -14,11 +14,19 @@ data CrossbowError
   = TooManyArgumentsError OpType Int Int
   | UncaughtParseError ParseError
   | EvalError Text
+  | CastToIntError Value
+  | CastToDoubleError Value
+  | CastToCharError Value
+  | CastToBoolError Value
 
 instance Pretty CrossbowError where
   pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
   pretty (UncaughtParseError e) = "Parsing error: " <> show e
   pretty (EvalError e) = "Evaluation error: " <> show e
+  pretty (CastToIntError v) = "Cannot cast to Integer: " <> show v
+  pretty (CastToDoubleError v) = "Cannot cast to Double: " <> show v
+  pretty (CastToCharError v) = "Cannot cast to Char: " <> show v
+  pretty (CastToBoolError v) = "Cannot cast to Bool: " <> show v
 
 data Value
   = VInteger Integer
@@ -37,17 +45,25 @@ instance Enum Value where
 
 instance Semigroup Value where
   (VInteger a) <> (VInteger b) = VInteger (a + b)
-  (VDouble a) <> (VDouble b) = VDouble (a + b)
   (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
+  (VDouble a) <> (VDouble b) = VDouble (a + b)
   (VDouble a) <> (VInteger b) = VDouble (a + fromIntegral b)
   (VChar a) <> (VChar b) = VChar (chr $ ord a + ord b)
   a@(VChar _) <> (VList bs) = VList (a : bs)
   (VList as) <> b@(VChar _) = VList (as ++ [b])
-  (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
-  a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
+  (VChar a) <> b =
+    case castToInt b of
+      Right (VInteger v) -> VChar (chr $ ord a + fromIntegral v)
+      Left e -> error (pretty e)
+  a <> (VChar b) =
+    case castToInt a of
+      Right (VInteger v) -> VChar (chr $ fromIntegral v + ord b)
+      Left e -> error (pretty e)
   (VList a) <> (VList b) = VList (getZipList $ (<>) <$> ZipList a <*> ZipList b)
   a <> (VList b) = VList ((a <>) <$> b)
   (VList a) <> b = VList (a <&> (<> b))
+  f@(VFunction _) <> _ = error $ "Cannot + unevaluated function: " <> show f
+  (VIdentifier i) <> _ = error $ "Cannot + unbound identifier: " <> i
 
 instance Num Value where
   (+) = (<>)
@@ -75,15 +91,17 @@ instance Num Value where
   abs (VInteger a) = VInteger (abs a)
   abs (VDouble a) = VDouble (abs a)
   abs (VList as) = VList (abs <$> as)
-  abs (VChar a) = error "Cannot abs a Char"
-  abs (VBool a) = error "Cannot abs a Bool"
+  abs (VChar _) = error "Cannot abs a Char"
+  abs (VBool _) = error "Cannot abs a Bool"
   abs (VFunction f) = error $ "Cannot abs an unevaluated function: " <> show f
   abs (VIdentifier i) = error $ "Cannot abs an unbound identifier: " <> i
   signum (VInteger a)
     | a == 0 = 0
     | a < 0 = -1
     | otherwise = 1
-  signum a = signum (castToInt a)
+  signum a = case castToInt a of
+    Right a -> signum a
+    Left e -> error (pretty e)
   fromInteger a = VInteger a
   negate (VInteger a) = VInteger (negate a)
   negate (VDouble a) = VDouble (negate a)
@@ -95,14 +113,22 @@ instance Num Value where
   negate (VIdentifier i) = error $ "Cannot negate an unbound identifier: " <> i
 
 instance Integral Value where
-  quotRem a b =
-    let (VInteger a') = castToInt a
-        (VInteger b') = castToInt b
-     in both VInteger (a' `quotRem` b')
-  toInteger a = let (VInteger a') = castToInt a in a'
+  quotRem (VInteger a) (VInteger b) = both VInteger (a `quotRem` b)
+  quotRem a b = case ( do
+                         a' <- castToInt a
+                         b' <- castToInt b
+                         return $ a' `quotRem` b'
+                     ) of
+    Right v -> v
+    Left e -> error (pretty e)
+  toInteger a = case castToInt a of
+    Right (VInteger a) -> a
+    Left e -> error (pretty e)
 
 instance Real Value where
-  toRational a = let (VDouble a') = castToDouble a in toRational a'
+  toRational a = case castToDouble a of
+    Right (VDouble a) -> toRational a
+    Left e -> error (pretty e)
 
 vCons :: Value -> Value -> Value
 vCons a (VList bs) = VList (a : bs)
@@ -128,43 +154,55 @@ truthy (VList []) = False
 truthy (VDouble 0.0) = False
 truthy _ = True
 
-castToInt :: Value -> Value
-castToInt v@(VInteger _) = v
-castToInt (VDouble v) = VInteger (round v)
-castToInt (VChar v) = VInteger (fromIntegral $ digitToInt v)
+castToInt :: Value -> Either CrossbowError Value
+castToInt v@(VInteger _) = Right v
+castToInt (VDouble v) = Right $ VInteger (round v)
+castToInt (VChar v) = Right $ VInteger (fromIntegral $ digitToInt v)
 castToInt v@(VList vs)
   | all (`elem` (VChar <$> ("-0123456789" :: String))) vs =
-    VInteger (fst . fromRight' $ (TR.signed TR.decimal) (asText v))
-  | otherwise = VList (castToInt <$> vs)
-castToInt (VFunction f) = error $ "Cannot cast function to Integer: " <> show f
-castToInt (VBool b) = VInteger (fromIntegral $ fromEnum b)
+    -- Special case a numeric integer string
+    case TR.signed TR.decimal (asText v) of
+      Right (a, _) -> Right $ VInteger a
+      Left _ -> Left $ CastToIntError v
+  | otherwise =
+    case traverse castToInt vs of
+      Left e -> Left e
+      Right vs -> Right $ VList vs
+castToInt f@(VFunction _) = Left $ CastToIntError f
+castToInt (VBool b) = Right $ VInteger (fromIntegral $ fromEnum b)
 
-castToDouble :: Value -> Value
-castToDouble v@(VDouble _) = v
-castToDouble (VInteger v) = VDouble (fromIntegral v)
-castToDouble (VChar v) = VDouble (fromIntegral $ digitToInt v)
-castToDouble (VList vs) = VList (castToDouble <$> vs)
-castToDouble (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
-castToDouble f@(VFunction _) = error $ "Cannot cast function to Double: " <> show f
-castToDouble (VIdentifier i) = error $ "Cannot cast unbound identifier to Double: " <> i
+castToDouble :: Value -> Either CrossbowError Value
+castToDouble v@(VDouble _) = Right v
+castToDouble (VInteger v) = Right $ VDouble (fromIntegral v)
+castToDouble (VChar v) = Right $ VDouble (fromIntegral $ digitToInt v)
+castToDouble (VList vs) =
+  case traverse castToDouble vs of
+    Left e -> Left e
+    Right vs -> Right $ VList vs
+castToDouble (VBool b) = Right $ VInteger $ (fromIntegral $ fromEnum b)
+castToDouble f@(VFunction _) = Left $ CastToDoubleError f
+castToDouble i@(VIdentifier _) = Left $ CastToDoubleError i
 
-castToChar :: Value -> Value
-castToChar v@(VChar _) = v
-castToChar (VInteger v) = VChar (intToDigit (fromIntegral v))
-castToChar (VDouble v) = VChar (intToDigit $ round v)
-castToChar (VList vs) = VList (castToChar <$> vs)
-castToChar f@(VFunction _) = error $ "Cannot cast function to Char: " <> show f
-castToChar (VBool b) = VChar (intToDigit $ fromEnum b)
-castToChar (VIdentifier i) = error $ "Cannot cast unbound identifier to Char: " <> i
+castToChar :: Value -> Either CrossbowError Value
+castToChar v@(VChar _) = Right v
+castToChar (VInteger v) = Right $ VChar (intToDigit (fromIntegral v))
+castToChar (VDouble v) = Right $ VChar (intToDigit $ round v)
+castToChar (VList vs) =
+  case traverse castToChar vs of
+    Left e -> Left e
+    Right vs -> Right $ VList vs
+castToChar (VBool b) = Right $ VChar (intToDigit $ fromEnum b)
+castToChar f@(VFunction _) = Left $ CastToCharError f
+castToChar i@(VIdentifier _) = Left $ CastToCharError i
 
-castToBool :: Value -> Value
-castToBool v@(VBool _) = v
-castToBool a@(VInteger _) = VBool (truthy a)
-castToBool a@(VDouble _) = VBool (truthy a)
-castToBool a@(VList _) = VBool (truthy a)
-castToBool (VChar _) = error "Cannot cast Char to Bool"
-castToBool f@(VFunction _) = error $ "Cannot cast unevaluated function to Bool: " <> show f
-castToBool (VIdentifier i) = error $ "Cannot cast unbound identifier to Bool: " <> i
+castToBool :: Value -> Either CrossbowError Value
+castToBool v@(VBool _) = Right v
+castToBool a@(VInteger _) = Right $ VBool (truthy a)
+castToBool a@(VDouble _) = Right $ VBool (truthy a)
+castToBool a@(VList _) = Right $ VBool (truthy a)
+castToBool v@(VChar _) = Left $ CastToCharError v
+castToBool f@(VFunction _) = Left $ CastToCharError f
+castToBool i@(VIdentifier _) = Left $ CastToCharError i
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
@@ -172,18 +210,24 @@ instance Ord Value where
   (VInteger a) <= (VInteger b) = a <= b
   (VDouble a) <= (VDouble b) = a <= b
   (VChar a) <= (VChar b) = a <= b
-  a@(VInteger _) <= b@(VDouble _) = castToDouble a <= b
-  a@(VDouble _) <= b@(VInteger _) = a <= castToDouble b
+  a@(VInteger _) <= b@(VDouble _) =
+    case castToDouble a of
+      Left e -> error (pretty e)
+      Right a -> a <= b
+  a@(VDouble _) <= b@(VInteger _) =
+    case castToDouble b of
+      Left e -> error (pretty e)
+      Right a -> a <= b
   (VList []) <= (VList []) = True
-  (VList (a : as)) <= (VList (b : bs))
-    | castToDouble a == castToDouble b = VList as <= VList bs
-    | otherwise = a <= b
-  a <= (VList bs)
-    | isNumeric a = all (castToDouble a <=) bs
-    | otherwise = error "Invalid Ord on list"
-  (VList as) <= b
-    | isNumeric b = all (<= castToDouble b) as
-    | otherwise = error "Invalid Ord on list"
+  (VList (a : as)) <= (VList (b : bs)) = case ( do
+                                                  a' <- castToDouble a
+                                                  b' <- castToDouble b
+                                                  return $ if a' == b' then VList as <= VList bs else a <= b
+                                              ) of
+    Left e -> error (pretty e)
+    Right v -> v
+  _ <= (VList _) = error "Invalid Ord on list"
+  (VList _) <= _ = error "Invalid Ord on list"
 
 data Argument = Unbound | Bound Value deriving (Show, Eq)
 

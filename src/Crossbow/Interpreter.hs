@@ -120,9 +120,9 @@ value =
     vBool = VBool <$> (string "False" $> False <|> string "True" $> True)
     vRange :: P Value
     vRange = do
-      VInteger a <- ignoreSpaces (castToInt <$> vNumber)
+      VInteger a <- ignoreSpaces (fromRight' . castToInt <$> vNumber)
       ignoreSpaces (string ":")
-      VInteger b <- ignoreSpaces (castToInt <$> vNumber)
+      VInteger b <- ignoreSpaces (fromRight' . castToInt <$> vNumber)
       return $ VList (VInteger <$> [a .. b])
     arg = ignoreSpaces ((Bound <$$> value) <|> (char '_' $> return Unbound))
     -- An infix binary function bound inside parens
@@ -530,7 +530,7 @@ builtins =
             )
         )
       ),
-      ("fork", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = castToInt n in VList (replicate (fromInteger n') a)))),
+      ("fork", (Valence 2, HSImpl (\[n, a] -> let VInteger n' = fromRight' . castToInt $ n in VList (replicate (fromInteger n') a)))),
       ( "monadic",
         ( Valence 2,
           HSImplIO
@@ -550,10 +550,10 @@ builtins =
       ("lines", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.lines (unchar <$> t)))))),
       ("words", (Valence 1, HSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> Data.String.words (unchar <$> t)))))),
       ("ints", (Valence 1, CBImpl "{lines|int}")),
-      ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
-      ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
-      ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
-      ("bool", (Valence 1, HSImpl (\[a] -> castToBool a))),
+      ("int", (Valence 1, HSImpl (\[a] -> fromRight' . castToInt $ a))),
+      ("double", (Valence 1, HSImpl (\[a] -> fromRight' . castToDouble $ a))),
+      ("char", (Valence 1, HSImpl (\[a] -> fromRight' . castToChar $ a))),
+      ("bool", (Valence 1, HSImpl (\[a] -> fromRight' . castToBool $ a))),
       ("string", (Valence 1, HSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
       ( "read",
         ( Valence 1,

@@ -3,6 +3,7 @@
 - Do Next
   - [ ] Remove all partial functions to stop interpreter crashes:
     - Take out every fromRight', unsafePerformIO, error, and fail
+    - Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
     - Informative error messages including Program context at time of crash
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
