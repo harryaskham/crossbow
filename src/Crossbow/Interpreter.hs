@@ -48,6 +48,7 @@ clauses = value `sepBy1` clauseDivider
 
 -- TODO: Perhaps need deepEval here to enforce strictness
 runClauses :: [IO Value] -> IO (Either CrossbowError Value)
+runClauses [] = return (Left EmptyProgramError)
 runClauses (cIO : cIOs) = go cIO cIOs
   where
     go :: IO Value -> [IO Value] -> IO (Either CrossbowError Value)

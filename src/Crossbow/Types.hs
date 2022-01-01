@@ -19,6 +19,7 @@ data CrossbowError
   | CastToCharError Value
   | CastToBoolError Value
   | InternalError Text
+  | EmptyProgramError
 
 instance Pretty CrossbowError where
   pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
@@ -29,6 +30,7 @@ instance Pretty CrossbowError where
   pretty (CastToCharError v) = "Cannot cast to Char: " <> show v
   pretty (CastToBoolError v) = "Cannot cast to Bool: " <> show v
   pretty (InternalError e) = "Internal error: " <> e
+  pretty EmptyProgramError = "No program supplied"
 
 data Value
   = VInteger Integer
