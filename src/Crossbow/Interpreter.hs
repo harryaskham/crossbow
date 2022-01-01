@@ -48,7 +48,7 @@ clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
 clauses :: P [IO Value]
-clauses = (pure <$> value) `sepBy1` clauseDivider
+clauses = value `sepBy1` clauseDivider
 
 runClauses :: [IO Value] -> IO Value
 runClauses (c : cs) =
@@ -76,19 +76,29 @@ program = do
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
 
-value :: P Value
+-- If a function is fully bound, deeply eval, otherwise id
+maybeApply :: Function -> IO Value
+maybeApply f
+  | null (getUnbound f) = do
+    r <- deepEval (VFunction f)
+    case r of
+      Left e -> fail (show e)
+      Right v -> return v
+  | otherwise = return $ VFunction f
+
+value :: P (IO Value)
 value =
   firstOf
-    [ vRange,
-      vNumber,
+    [ return <$> vRange,
+      return <$> vNumber,
       inParens value,
       vLambda,
-      vIdentifier,
+      return <$> vIdentifier,
       vFunction,
       vList,
-      vChar,
-      vString,
-      vBool
+      return <$> vChar,
+      return <$> vString,
+      return <$> vBool
     ]
   where
     vIdentifier = do
@@ -106,85 +116,96 @@ value =
         then return . VDouble $ readOne (signed double) x
         else return . VInteger $ readOne (signed decimal) x
     vNumber = try vNegativeNumber <|> try vPositiveNumber
-    vList = VList <$> between (char '[') (char ']') (value `sepBy` (ignoreSpaces $ char ','))
+    vList :: P (IO Value)
+    vList = do
+      vsIO <- between (char '[') (char ']') (value `sepBy` ignoreSpaces (char ','))
+      return $ VList <$> sequence vsIO
+    vChar :: P Value
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
+    vString :: P Value
     vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
     vBool = VBool <$> (string "False" $> False <|> string "True" $> True)
-    -- TODO: Ranges can also be over variables
+    vRange :: P Value
     vRange = do
       VInteger a <- ignoreSpaces (castToInt <$> vNumber)
       ignoreSpaces (string ":")
       VInteger b <- ignoreSpaces (castToInt <$> vNumber)
       return $ VList (VInteger <$> [a .. b])
-    -- TODO: Uses unsafePerformIO to reduce functions as we parse
-    -- This will break e.g. fully applied getline
-    -- TODO: Change this to a P (IO Value)
-    maybeApply f
-      | null (getUnbound f) =
-        case unsafePerformIO $ deepEval (VFunction f) of
-          Left e -> fail (show e)
-          Right v -> return v
-      | otherwise = return $ VFunction f
-    arg = ignoreSpaces ((Bound <$> value) <|> (char '_' $> Unbound))
+    arg = ignoreSpaces ((Bound <$$> value) <|> (char '_' $> return Unbound))
+    -- An infix binary function bound inside parens
+    vFuncBin :: P (IO Value)
     vFuncBin =
       do
         char '('
-        a1 <- arg
+        a1IO <- arg
         op <- operator
-        a2 <- arg
+        a2IO <- arg
         char ')'
-        case mkFuncL op [a1, a2] of
-          Left e -> fail (show e)
-          Right f -> maybeApply f
+        return do
+          a1 <- a1IO
+          a2 <- a2IO
+          case mkFuncL op [a1, a2] of
+            Left e -> fail (show e)
+            Right f -> maybeApply f
     -- A polish notation left-applied func with maybe unbound variables
+    vFuncL :: P (IO Value)
     vFuncL =
       do
         op <- operator
-        args <- many1 arg
-        case mkFuncL op args of
-          Left e -> fail (show e)
-          Right f -> maybeApply f
+        argsIO <- many1 arg
+        return do
+          args <- sequence argsIO
+          case mkFuncL op args of
+            Left e -> fail (show e)
+            Right f -> maybeApply f
     -- Finally, a func with no arguments
+    vFunc :: P (IO Value)
     vFunc = do
       op <- operator
       let f = mkFunc op
-      maybeApply f
+      return $ maybeApply f
+    vFunction :: P (IO Value)
     vFunction =
       firstOf
         [ vFuncL,
           vFuncBin,
           vFunc
         ]
-    -- Lambdas!
+    -- On the fly function with arguments designated $0, $1... within {}
     -- If lambda has no argument, we assume it is preceded by $0
+    vLambda :: P (IO Value)
     vLambda = do
       char '{'
       csIO <- clauses
-      let numArgs = unsafePerformIO do
-            cs <- sequence csIO
-            case mapMaybe maxArgIx cs of
-              [] -> return 0
-              ns -> return $ L.maximum ns + 1
-      let csIOWithInitial = case numArgs of
-            0 -> (pure $ VIdentifier "$0") : csIO
-            _ -> csIO
       char '}'
-      return $
-        VFunction
-          ( Function
-              Nothing
-              ( HSImplIO
-                  ( \args -> do
-                      let csIO' = substituteArgs args <$> csIOWithInitial
-                      v <- runClauses csIO'
-                      -- If our lambda resulted in a fully bound function
-                      -- Or e.g. a list of fully bound things
-                      -- We need to evaluate it down here
-                      fromRight' <$> deepEval v
-                  )
-              )
-              (replicate (max 1 numArgs) Unbound)
-          )
+      return do
+        numArgs <- do
+          cs <- sequence csIO
+          case mapMaybe maxArgIx cs of
+            [] -> return 0
+            ns -> return $ L.maximum ns + 1
+        let csIOWithInitial =
+              case numArgs of
+                0 -> pure (VIdentifier "$0") : csIO
+                _ -> csIO
+        return $
+          VFunction
+            ( Function
+                Nothing
+                ( HSImplIO
+                    ( \args -> do
+                        let csIO' = substituteArgs args <$> csIOWithInitial
+                        v <- runClauses csIO'
+                        -- If our lambda resulted in a fully bound function
+                        -- Or e.g. a list of fully bound things
+                        -- We need to evaluate it down here
+                        -- TODO: This is the wrong place to be enforcing strictness
+                        -- Maybe if the last thing that happens in a lambda is a binding we don't eval?
+                        fromRight' <$> deepEval v
+                    )
+                )
+                (replicate (max 1 numArgs) Unbound)
+            )
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i

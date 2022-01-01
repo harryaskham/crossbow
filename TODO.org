@@ -2,10 +2,8 @@
 
 - Do Next
   - [ ] Remove all partial functions to stop interpreter crashes:
+    - Take out every fromRight', unsafePerformIO, error, and fail
     - Informative error messages including Program context at time of crash
-    - Take out every fromRight'
-      - Interpreter.hs
-      - And in parser: when eval'ing
     - Semigroup / Num instances for Value need exhaustive patterns
     - Builtin functions fail gracefully
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
@@ -17,6 +15,7 @@
   - [ ] Move the standard library to a module system
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
+  - [ ] range syntax with variable endpoints
   - [X] Program fragments as lambdas
     - Either monadic (args as a list) or variadic (how?)
     - Allow parsing subprograms in parens
