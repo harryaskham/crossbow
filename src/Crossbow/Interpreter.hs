@@ -230,15 +230,8 @@ data BindDir = BindFromLeft | BindFromRight
 
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> IO Value
--- Two functions compose together, if possible
--- TODO: Disabled to enable map; functions are just objects too...
--- apply (VFunction _) (VFunction _) = error "todo: compose functions"
 -- If we have a function in program state, apply to the right
-apply (VFunction f) v = do
-  r <- applyF f v BindFromLeft
-  case r of
-    Left e -> error (pretty e)
-    Right r -> return r
+apply (VFunction f) v = fromRight' <$> applyF f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
 apply v (VFunction f) = fromRight' <$> applyF f v BindFromRight
 -- Application of lists tries to ziplist
@@ -289,7 +282,6 @@ applyF f value bindDir
 
 unbind :: Argument -> Value
 unbind (Bound v) = v
-unbind Unbound = error "Unbinding unbound"
 
 isIdentifier :: Value -> Bool
 isIdentifier (VIdentifier _) = True

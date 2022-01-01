@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight'
@@ -13,11 +14,11 @@
     - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
     - [ ] Exhausive Semigroup
     - [X] Exhaustive Num
-    - Builtin functions fail gracefully
+    - [ ] Finally take out all compiler warnings
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
     - Negate shoudl not be called on a function; somehow we're not substituting properly
-  - [ ] variadic, inverse function of monadic
 - Language features
+  - [ ] variadic, inverse function of monadic
   - [ ] Let bindings
   - [ ] Lexical scoping
   - [ ] Move the standard library to a module system
