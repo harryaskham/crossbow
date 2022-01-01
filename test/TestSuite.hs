@@ -107,12 +107,15 @@ main = do
     "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u',[0,0,ix 1 $0]],['d',[0,ix 1 $0,0]],['f',[ix 1 $0,0,0]]]} | sum | fork 2 | [head, tail] | second (monadic -) | monadic *"
     (VInteger 1690020)
 
-{-
+  assertEvaluatesTo
+    "Day 2 (Part 1) 3"
+    "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | sum | monadic *"
+    (VInteger 1690020)
+
   assertEvaluatesTo
     "Day 2 (Part 2)"
-    "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]}"
+    "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | fold {$0|first (+ (fst $1))|second (+ (* (fst $1) (thd $0)))|third (+ (snd $1))} [0,0,0] | take 2 | monadic *"
     (VInteger 1408487760)
--}
 
 --assertEvaluatesTo "Day 3 (Part 1)" "" (VInteger 3320834)
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
