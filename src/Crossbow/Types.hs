@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-
 module Crossbow.Types where
 
 import Crossbow.Util
@@ -38,6 +36,8 @@ instance Enum Value where
   fromEnum = error "Use of fromEnum on Value"
 
 instance Semigroup Value where
+  a <> (VList b) = VList ((a <>) <$> b)
+  (VList a) <> b = VList (a <&> (<> b))
   (VInteger a) <> (VInteger b) = VInteger (a + b)
   (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
   a@(VInteger _) <> b = a <> castToInt b
@@ -46,12 +46,12 @@ instance Semigroup Value where
   a@(VDouble _) <> b = a <> castToDouble b
   (VChar a) <> (VChar b) = VChar (chr $ ord a + ord b)
   a@(VChar _) <> (VList bs) = VList (a : bs)
-  (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
+  a@(VChar _) <> b = a <> castToChar b
   (VList as) <> b@(VChar _) = VList (as ++ [b])
-  a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
   (VList a) <> (VList b) = VList (getZipList $ (<>) <$> ZipList a <*> ZipList b)
-  a <> (VList b) = VList ((a <>) <$> b)
-  (VList a) <> b = VList (a <&> (<> b))
+  a@(VBool _) <> b = a <> castToBool b
+  (VFunction f) <> _ = error $ "Cannot + unevaluated function: " <> show f
+  (VIdentifier i) <> _ = error $ "Cannot + unbound identifier"
 
 instance Num Value where
   (+) = (<>)
@@ -59,14 +59,14 @@ instance Num Value where
   (VInteger a) * (VDouble b) = VDouble $ fromIntegral a * b
   (VInteger _) * (VChar _) = error "Cannot multiply Integer and Char"
   (VInteger _) * (VBool _) = error "Cannot multiply Integer and Bool"
-  (VInteger _) * (VFunction _) = error "Cannot multiply Integer and unevaluated function"
-  (VInteger _) * (VIdentifier _) = error "Cannot multiply Integer and unbound identifier"
+  (VInteger _) * (VFunction f) = error $ "Cannot multiply Integer and unevaluated function: " <> show f
+  (VInteger _) * (VIdentifier i) = error $ "Cannot multiply Integer and unbound identifier: " <> i
   (VDouble a) * (VDouble b) = VDouble $ a * b
   (VDouble a) * (VInteger b) = VDouble $ a * fromIntegral b
   (VDouble _) * (VChar _) = error "Cannot multiply Double and Char"
   (VDouble _) * (VBool _) = error "Cannot multiply Double and Bool"
-  (VDouble _) * (VFunction _) = error "Cannot multiply Double and unevaluated function"
-  (VDouble _) * (VIdentifier _) = error "Cannot multiply Double and unbound identifier"
+  (VDouble _) * (VFunction f) = error $ "Cannot multiply Double and unevaluated function: " <> show f
+  (VDouble _) * (VIdentifier i) = error $ "Cannot multiply Double and unbound identifier: " <> i
   (VList _) * (VList []) = VList []
   (VList []) * (VList _) = VList []
   (VList (a : as)) * (VList (b : bs)) = vCons (a * b) (VList as * VList bs)
@@ -140,7 +140,7 @@ castToInt v@(VList vs)
   | all (`elem` (VChar <$> ("-0123456789" :: String))) vs =
     VInteger (fst . fromRight' $ (TR.signed TR.decimal) (asText v))
   | otherwise = VList (castToInt <$> vs)
-castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
+castToInt (VFunction f) = error $ "Cannot cast function to Integer: " <> show f
 castToInt (VBool b) = VInteger (fromIntegral $ fromEnum b)
 
 castToDouble :: Value -> Value
@@ -148,16 +148,27 @@ castToDouble v@(VDouble _) = v
 castToDouble (VInteger v) = VDouble (fromIntegral v)
 castToDouble (VChar v) = VDouble (fromIntegral $ digitToInt v)
 castToDouble (VList vs) = VList (castToDouble <$> vs)
-castToDouble f@(VFunction _) = f -- TODO: Compose casting with the given f
 castToDouble (VBool b) = VInteger $ (fromIntegral $ fromEnum b)
+castToDouble f@(VFunction _) = error $ "Cannot cast function to Double: " <> show f
+castToDouble (VIdentifier i) = error $ "Cannot cast unbound identifier to Double: " <> i
 
 castToChar :: Value -> Value
 castToChar v@(VChar _) = v
 castToChar (VInteger v) = VChar (intToDigit (fromIntegral v))
 castToChar (VDouble v) = VChar (intToDigit $ round v)
 castToChar (VList vs) = VList (castToChar <$> vs)
-castToChar f@(VFunction _) = f -- TODO: Compose casting with the given f
+castToChar f@(VFunction _) = error $ "Cannot cast function to Char: " <> show f
 castToChar (VBool b) = VChar (intToDigit $ fromEnum b)
+castToChar (VIdentifier i) = error $ "Cannot cast unbound identifier to Char: " <> i
+
+castToBool :: Value -> Value
+castToBool v@(VBool _) = v
+castToBool a@(VInteger _) = VBool (truthy a)
+castToBool a@(VDouble _) = VBool (truthy a)
+castToBool a@(VList _) = VBool (truthy a)
+castToBool (VChar _) = error "Cannot cast Char to Bool"
+castToBool f@(VFunction _) = error $ "Cannot cast unevaluated function to Bool: " <> show f
+castToBool (VIdentifier i) = error $ "Cannot cast unbound identifier to Bool: " <> i
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"

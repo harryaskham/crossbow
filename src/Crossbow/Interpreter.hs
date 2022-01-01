@@ -553,7 +553,7 @@ builtins =
       ("int", (Valence 1, HSImpl (\[a] -> castToInt a))),
       ("double", (Valence 1, HSImpl (\[a] -> castToDouble a))),
       ("char", (Valence 1, HSImpl (\[a] -> castToChar a))),
-      ("bool", (Valence 1, HSImpl (\[a] -> VBool $ truthy a))),
+      ("bool", (Valence 1, HSImpl (\[a] -> castToBool a))),
       ("string", (Valence 1, HSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
       ( "read",
         ( Valence 1,
