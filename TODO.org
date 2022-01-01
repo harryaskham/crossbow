@@ -5,6 +5,11 @@
     - [-] Take out every:
       - [ ] fromRight'
       - [X] unsafePerformIO
+    - [ ] Remove partiality for builtins
+      - Move to a new module
+      - Give each its own line
+      - Each then gets enough space to error out on a bad valence match
+      - Can also handle errors more nicely inside
     - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
     - [ ] Exhausive Semigroup
     - [X] Exhaustive Num
