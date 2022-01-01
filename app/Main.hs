@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Exception
 import Crossbow.Interpreter
 import Crossbow.Types
 import Data.Text qualified as T
@@ -13,9 +14,8 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
       case inputM of
         Nothing -> return ()
         Just input -> do
-          case compile (T.pack input) of
-            Right resultIO -> do
-              result <- liftIO resultIO
-              putTextLn (pretty result)
+          pE <- liftIO $ compile (T.pack input)
+          case pE of
+            Right result -> putTextLn (pretty result)
             Left e -> liftIO $ putTextLn (pretty e)
           loop

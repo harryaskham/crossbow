@@ -18,6 +18,7 @@ data CrossbowError
   | CastToDoubleError Value
   | CastToCharError Value
   | CastToBoolError Value
+  | InternalError Text
 
 instance Pretty CrossbowError where
   pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
@@ -27,6 +28,7 @@ instance Pretty CrossbowError where
   pretty (CastToDoubleError v) = "Cannot cast to Double: " <> show v
   pretty (CastToCharError v) = "Cannot cast to Char: " <> show v
   pretty (CastToBoolError v) = "Cannot cast to Bool: " <> show v
+  pretty (InternalError e) = "Internal error: " <> e
 
 data Value
   = VInteger Integer

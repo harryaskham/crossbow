@@ -1,5 +1,6 @@
 module Crossbow.Interpreter where
 
+import Control.Exception qualified as E
 import Control.Monad (foldM)
 import Crossbow.Types
 import Crossbow.Util
@@ -22,13 +23,15 @@ import Prelude hiding (optional)
 
 type P = GenParser Char ()
 
-compile :: Text -> Either CrossbowError (IO Value)
+compile :: Text -> IO (Either CrossbowError Value)
 compile t = case parse program "" . T.unpack $ t of
-  Left e -> Left $ UncaughtParseError e
-  Right p -> Right p
+  Left e -> return . Left $ UncaughtParseError e
+  Right pIO -> pIO
 
 compileUnsafe :: Text -> IO Value
-compileUnsafe = fromRight' . compile
+compileUnsafe p = do
+  pE <- compile p
+  return $ fromRight' pE
 
 -- Parse one of the things given, backtracking on failure
 firstOf :: [P a] -> P a
@@ -43,27 +46,22 @@ clauseDivider = ignoreSpaces (char '|')
 clauses :: P [IO Value]
 clauses = value `sepBy1` clauseDivider
 
-runClauses :: [IO Value] -> IO Value
-runClauses (c : cs) =
-  foldl'
-    ( \vIO cIO -> do
-        -- Enforce strictness: deeply evaluate both function and arg values before applying
-        -- TODO: This made things pretty slow, is this really needed?
-        v <- vIO
-        c <- cIO
-        apply v c
-        {-
-        deepC <- deepEval c
-        case deepC of
-          Left e -> error $ "Error deepening RHS: " <> show e
-          Right deepC -> apply v deepC
-        -}
-    )
-    c
-    cs
+-- TODO: Perhaps need deepEval here to enforce strictness
+runClauses :: [IO Value] -> IO (Either CrossbowError Value)
+runClauses (cIO : cIOs) = go cIO cIOs
+  where
+    go :: IO Value -> [IO Value] -> IO (Either CrossbowError Value)
+    go vIO [] = Right <$> vIO
+    go vIO (cIO : cIOs) = do
+      v <- vIO
+      c <- cIO
+      exE <- E.try (apply v c) :: (IO (Either SomeException Value))
+      case exE of
+        Left e -> return . Left $ InternalError (show e)
+        Right v' -> go (return v') cIOs
 
-program :: P (IO Value)
-program = do
+program :: P (IO (Either CrossbowError Value))
+program =
   runClauses <$> clauses
 
 inParens :: P a -> P a
@@ -124,7 +122,7 @@ value =
       ignoreSpaces (string ":")
       VInteger b <- ignoreSpaces (fromRight' . castToInt <$> vNumber)
       return $ VList (VInteger <$> [a .. b])
-    arg = ignoreSpaces ((Bound <$$> value) <|> (char '_' $> return Unbound))
+    arg = ignoreSpaces ((Bound <$$> value) <|> char '_' $> return Unbound)
     -- An infix binary function bound inside parens
     vFuncBin :: P (IO Value)
     vFuncBin =
@@ -194,7 +192,7 @@ value =
                         -- We need to evaluate it down here
                         -- TODO: This is the wrong place to be enforcing strictness
                         -- Maybe if the last thing that happens in a lambda is a binding we don't eval?
-                        fromRight' <$> deepEval v
+                        fromRight' <$> deepEval (fromRight' v)
                     )
                 )
                 (replicate (max 1 numArgs) Unbound)
@@ -202,7 +200,7 @@ value =
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
-maxArgIx (VFunction f@(Function {})) =
+maxArgIx (VFunction f@Function {}) =
   case mapMaybe maxArgIx $ unbind <$> getBound f of
     [] -> Nothing
     ixs -> Just $ L.maximum ixs
@@ -299,10 +297,10 @@ isIdentifier _ = False
 
 runCBImpl :: Text -> [Value] -> IO (Either CrossbowError Value)
 runCBImpl cbF argVals = do
-  case compile cbF of
+  pE <- compile cbF
+  case pE of
     Left e -> return $ Left e
-    Right fIO -> do
-      f <- fIO
+    Right f -> do
       result <- foldM apply f argVals
       return $ Right result
 
@@ -538,7 +536,7 @@ builtins =
                 foldlM
                   ( \v a -> do
                       case v of
-                        VFunction f -> do
+                        VFunction f ->
                           fromRight' <$> applyF f a BindFromLeft
                         _ -> return v
                   )
