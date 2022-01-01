@@ -10,7 +10,7 @@ assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg program expected = do
   print msg
   case compile program of
-    Left e -> assertFailure (T.unpack msg <> show e)
+    Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
     Right vIO -> do
       v <- vIO
       assertEqual (T.unpack msg) v expected
