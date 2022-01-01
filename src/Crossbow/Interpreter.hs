@@ -3,8 +3,29 @@ module Crossbow.Interpreter where
 import Control.Exception qualified as E
 import Control.Monad (foldM)
 import Crossbow.Builtin
+  ( deepEval,
+    getBound,
+    identifierIx,
+    runClauses,
+    substituteArgs,
+    unbind,
+  )
 import Crossbow.Types
-import Crossbow.Util
+  ( Argument (..),
+    Builtins,
+    CrossbowError (TooManyArgumentsError),
+    Function (..),
+    OpImpl (HSImplIO),
+    OpType (OpType),
+    Operator (..),
+    P,
+    Pretty (pretty),
+    ProgramParser,
+    Valence (Valence),
+    Value (..),
+    castToInt,
+  )
+import Crossbow.Util ((<$$>))
 import Data.Either.Extra (fromRight')
 import Data.Foldable (foldl1)
 import Data.Foldable.Extra (foldrM)
@@ -18,11 +39,26 @@ import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
 import Data.Vector.Fusion.Stream.Monadic (foldl1M')
 import GHC.ExecutionStack (Location (functionName))
-import Text.ParserCombinators.Parsec (ParseError)
-import Text.ParserCombinators.Parsec hiding (many, (<|>))
+import Text.ParserCombinators.Parsec
+  ( ParseError,
+    anyChar,
+    between,
+    char,
+    digit,
+    many1,
+    noneOf,
+    oneOf,
+    sepBy,
+    sepBy1,
+    spaces,
+    string,
+    try,
+  )
 import Prelude hiding (optional)
 
 type ParseContext = Builtins
+
+type ValueParser = Reader ParseContext (P (IO Value))
 
 -- Parse one of the things given, backtracking on failure
 firstOf :: [P a] -> P a
@@ -44,18 +80,6 @@ program = clauses
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
-
--- If a function is fully bound, deeply eval, otherwise id
---maybeApply :: Function -> IO Value
---maybeApply f
---  | null (getUnbound f) = do
---    r <- deepEval (VFunction f)
---    case r of
---      Left e -> fail (T.unpack $ pretty e)
---      Right v -> return v
---  | otherwise = return $ VFunction f
-
-type ValueParser = Reader ParseContext (P (IO Value))
 
 value :: Reader ParseContext (P (IO Value))
 value =
@@ -142,7 +166,6 @@ value =
             a2 <- a2IO
             case runReader (mkFuncL op [a1, a2]) pc of
               Left e -> fail (T.unpack $ pretty e)
-              --Right f -> maybeApply f
               Right f -> return $ VFunction f
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: ValueParser
@@ -157,7 +180,6 @@ value =
           args <- sequence argsIO
           case runReader (mkFuncL op args) pc of
             Left e -> fail (T.unpack $ pretty e)
-            --Right f -> maybeApply f
             Right f -> return $ VFunction f
     -- Finally, a func with no arguments
     vFunc :: ValueParser
@@ -167,7 +189,6 @@ value =
       return do
         op <- operator'
         let f = runReader (mkFunc op) pc
-        --return $ maybeApply f
         return . return $ VFunction f
     vFunction :: ValueParser
     vFunction =
@@ -204,11 +225,6 @@ value =
                       ( \pp args -> do
                           let csIO' = substituteArgs args <$> csIOWithInitial
                           v <- runClauses pp csIO'
-                          -- If our lambda resulted in a fully bound function
-                          -- Or e.g. a list of fully bound things
-                          -- We need to evaluate it down here
-                          -- TODO: This is the wrong place to be enforcing strictness
-                          -- Maybe if the last thing that happens in a lambda is a binding we don't eval?
                           fromRight' <$> deepEval pp (fromRight' v)
                       )
                   )

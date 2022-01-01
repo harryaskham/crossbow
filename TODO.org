@@ -1,8 +1,6 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Need to separate builtin names from their implementations
-  - [ ] VLambda is just returning VList of clauses, we need to evaluate these
   - [ ] Parser should never evaluate, let's really separate this out
   - [ ] Semantically rename Builtin/Interpret as Interpreter/Parser
   - [ ] 'apply' should be an Either, which will bubble up far
@@ -21,6 +19,7 @@
     - [ ] Finally take out all compiler warnings
   - [ ] Implement strictness properly; we are not evaluating our arguments while binding
     - Negate shoudl not be called on a function; somehow we're not substituting properly
+  - [ ] Somehow separate parsing and evaluating. deepeval / runclauses should not be in parser
 - Language features
   - [ ] variadic, inverse function of monadic
   - [ ] Let bindings
