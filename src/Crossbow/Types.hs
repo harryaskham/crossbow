@@ -4,11 +4,23 @@ module Crossbow.Types where
 
 import Crossbow.Util
 import Data.Char
+import Data.Either.Extra (fromRight')
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read qualified as TR
 import Data.Tuple.Extra (both)
+import Text.Parsec.Error (ParseError)
 import Text.Show (showsPrec)
+
+data CrossbowError
+  = TooManyArgumentsError OpType Int Int
+  | UncaughtParseError ParseError
+  | EvalError Text
+
+instance Pretty CrossbowError where
+  pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
+  pretty (UncaughtParseError e) = "Parsing error: " <> show e
+  pretty (EvalError e) = "Evaluation error: " <> show e
 
 data Value
   = VInteger Integer
@@ -104,7 +116,7 @@ castToInt (VDouble v) = VInteger (round v)
 castToInt (VChar v) = VInteger (fromIntegral $ digitToInt v)
 castToInt v@(VList vs)
   | all (`elem` (VChar <$> ("-0123456789" :: String))) vs =
-    VInteger (readOne (TR.signed TR.decimal) (asText v))
+    VInteger (fst . fromRight' $ (TR.signed TR.decimal) (asText v))
   | otherwise = VList (castToInt <$> vs)
 castToInt f@(VFunction _) = f -- TODO: Compose casting with the given f
 castToInt (VBool b) = VInteger $ (fromIntegral $ fromEnum b)

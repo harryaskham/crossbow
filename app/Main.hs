@@ -21,5 +21,5 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
               result <- liftIO resultIO
               when debug (liftIO $ print result)
               putTextLn (pretty result)
-            Left e -> liftIO $ print (show e)
+            Left e -> liftIO $ putTextLn (pretty e)
           loop

@@ -20,15 +20,9 @@ import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
 import Prelude hiding (optional)
 
-data CrossbowParseError
-  = ArgNumError
-  | FullApplicationError CrossbowEvalError
-  | UncaughtParseError ParseError
-  deriving (Show)
-
 type P = GenParser Char ()
 
-compile :: Text -> Either CrossbowParseError (IO Value)
+compile :: Text -> Either CrossbowError (IO Value)
 compile t = case parse program "" . T.unpack $ t of
   Left e -> Left $ UncaughtParseError e
   Right p -> Right p
@@ -81,7 +75,7 @@ maybeApply f
   | null (getUnbound f) = do
     r <- deepEval (VFunction f)
     case r of
-      Left e -> fail (show e)
+      Left e -> fail (T.unpack $ pretty e)
       Right v -> return v
   | otherwise = return $ VFunction f
 
@@ -112,8 +106,8 @@ value =
     vPositiveNumber = do
       x <- T.pack <$> ignoreSpaces (many1 (oneOf ".0123456789"))
       if "." `T.isInfixOf` x
-        then return . VDouble $ readOne (signed double) x
-        else return . VInteger $ readOne (signed decimal) x
+        then return . VDouble $ (fst . fromRight' . signed double) x
+        else return . VInteger $ (fst . fromRight' . signed decimal) x
     vNumber = try vNegativeNumber <|> try vPositiveNumber
     vList :: P (IO Value)
     vList = do
@@ -144,7 +138,7 @@ value =
           a1 <- a1IO
           a2 <- a2IO
           case mkFuncL op [a1, a2] of
-            Left e -> fail (show e)
+            Left e -> fail (T.unpack $ pretty e)
             Right f -> maybeApply f
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: P (IO Value)
@@ -155,7 +149,7 @@ value =
         return do
           args <- sequence argsIO
           case mkFuncL op args of
-            Left e -> fail (show e)
+            Left e -> fail (T.unpack $ pretty e)
             Right f -> maybeApply f
     -- Finally, a func with no arguments
     vFunc :: P (IO Value)
@@ -219,9 +213,9 @@ mkFunc (Operator (OpType t) (Valence v)) =
   let (_, impl) = builtins M.! t
    in Function (Just t) impl (replicate v Unbound)
 
-mkFuncL :: Operator -> [Argument] -> Either CrossbowParseError Function
-mkFuncL (Operator (OpType t) (Valence v)) args
-  | length args > v = Left ArgNumError
+mkFuncL :: Operator -> [Argument] -> Either CrossbowError Function
+mkFuncL (Operator o@(OpType t) (Valence v)) args
+  | length args > v = Left $ TooManyArgumentsError o v (length args)
   | length args < v = Right $ Function (Just t) impl (args ++ replicate (v - length args) Unbound)
   | otherwise = Right $ Function (Just t) impl args
   where
@@ -245,7 +239,7 @@ apply :: Value -> Value -> IO Value
 apply (VFunction f) v = do
   r <- applyF f v BindFromLeft
   case r of
-    Left e -> error (show e)
+    Left e -> error (pretty e)
     Right r -> return r
 -- If we have a value in program state and encounter a function, apply it
 apply v (VFunction f) = fromRight' <$> applyF f v BindFromRight
@@ -287,15 +281,13 @@ getBound :: Function -> [Argument]
 getBound (Function _ _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
-applyF :: Function -> Value -> BindDir -> IO (Either CrossbowEvalError Value)
+applyF :: Function -> Value -> BindDir -> IO (Either CrossbowError Value)
 applyF f value bindDir
   | length unbound == 1 = deepEval (VFunction (bindNext f value bindDir))
   | length unbound > 1 = return . Right $ VFunction (bindNext f value bindDir)
   | null unbound = return $ Left (EvalError "none unbound for the final binding")
   where
     unbound = getUnbound f
-
-data CrossbowEvalError = EvalError Text deriving (Show)
 
 unbind :: Argument -> Value
 unbind (Bound v) = v
@@ -305,16 +297,16 @@ isIdentifier :: Value -> Bool
 isIdentifier (VIdentifier _) = True
 isIdentifier _ = False
 
-runCBImpl :: Text -> [Value] -> IO (Either CrossbowEvalError Value)
+runCBImpl :: Text -> [Value] -> IO (Either CrossbowError Value)
 runCBImpl cbF argVals = do
   case compile cbF of
-    Left e -> return $ Left (EvalError (show e))
+    Left e -> return $ Left e
     Right fIO -> do
       f <- fIO
       result <- foldM apply f argVals
       return $ Right result
 
-evalF :: Value -> IO (Either CrossbowEvalError Value)
+evalF :: Value -> IO (Either CrossbowError Value)
 evalF vf@(VFunction f@(Function _ impl args))
   -- If we're not fully bound, this is as far as we can go
   | not (null $ getUnbound f) = return $ Right vf
@@ -331,7 +323,7 @@ evalF v = return $ Right v
 
 -- Turn e.g. $4 into 4
 identifierIx :: Value -> Int
-identifierIx (VIdentifier i) = readOne decimal (T.drop 1 i)
+identifierIx (VIdentifier i) = fst . fromRight' $ decimal (T.drop 1 i)
 
 -- Sub any Identifier placeholders with their actual values
 substituteArgs :: [Value] -> IO Value -> IO Value
@@ -348,7 +340,7 @@ substituteArgs subs vIO = do
     substituteBoundArg _ Unbound = return Unbound
     substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
 
-deepEval :: Value -> IO (Either CrossbowEvalError Value)
+deepEval :: Value -> IO (Either CrossbowError Value)
 deepEval f@(VFunction _) = evalF f
 deepEval (VList as) = do
   as <- traverse deepEval as
