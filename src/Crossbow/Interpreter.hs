@@ -16,7 +16,6 @@ import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
 import Data.Vector.Fusion.Stream.Monadic (foldl1M')
 import GHC.ExecutionStack (Location (functionName))
-import GHC.IO.Unsafe (unsafeInterleaveIO, unsafePerformIO)
 import Text.ParserCombinators.Parsec (ParseError)
 import Text.ParserCombinators.Parsec hiding (many, (<|>))
 import Prelude hiding (optional)
