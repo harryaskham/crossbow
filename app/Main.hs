@@ -5,9 +5,6 @@ import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline
 
-debug :: Bool
-debug = False
-
 main :: IO ()
 main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True}) loop
   where
@@ -19,7 +16,6 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
           case compile (T.pack input) of
             Right resultIO -> do
               result <- liftIO resultIO
-              when debug (liftIO $ print result)
               putTextLn (pretty result)
             Left e -> liftIO $ putTextLn (pretty e)
           loop
