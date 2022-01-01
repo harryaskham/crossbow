@@ -51,7 +51,7 @@ main = do
   assertEvaluatesTo "fold over list" "foldl | + | 0 | [1,2,3]" (VInteger 6)
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
-  assertEvaluatesTo "minimum" "[1,3,2]|maximum" (VInteger 1)
+  assertEvaluatesTo "minimum" "[1,3,2]|minimum" (VInteger 1)
   assertEvaluatesTo "fans out" "1 | fork 4 _" (VList $ VInteger <$> [1, 1, 1, 1])
   assertEvaluatesTo "converts string to int" "\"123\"|int" (VInteger 123)
   assertEvaluatesTo "drops" "1:10 | drop 6 _" (VList $ VInteger <$> [7, 8, 9, 10])
