@@ -1,5 +1,6 @@
 module Main where
 
+import Crossbow.Builtin
 import Crossbow.Interpreter
 import Crossbow.Types
 import Crossbow.Util
@@ -7,9 +8,10 @@ import Data.Text qualified as T
 import Test.HUnit (assertEqual, assertFailure)
 
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
-assertEvaluatesTo msg program expected = do
+assertEvaluatesTo msg source expected = do
   print msg
-  pE <- compile program
+  let programParser = runReader program builtins
+  pE <- compile programParser source
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
     Right v -> assertEqual (T.unpack msg) v expected

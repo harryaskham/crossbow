@@ -1,6 +1,10 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Need to separate builtin names from their implementations
+  - [ ] VLambda is just returning VList of clauses, we need to evaluate these
+  - [ ] Parser should never evaluate, let's really separate this out
+  - [ ] Semantically rename Builtin/Interpret as Interpreter/Parser
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
@@ -54,6 +58,7 @@
   - [X] Clause pipes
   - [X] Basic arithmetic
 - Interface Features
+  - [ ] Compile REPL with Haste for web?
   - [ ] Builtin for reading piped STDIN
   - [ ] Evaluate on keypress
   - [ ] Auto-updating display as you type

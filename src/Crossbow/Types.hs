@@ -8,7 +8,19 @@ import Data.Text qualified as T
 import Data.Text.Read qualified as TR
 import Data.Tuple.Extra (both)
 import Text.Parsec.Error (ParseError)
+import Text.ParserCombinators.Parsec (GenParser)
 import Text.Show (showsPrec)
+
+type P = GenParser Char ()
+
+type ProgramParser = P [IO Value]
+
+type Builtins = Map Text (Valence, OpImpl)
+
+data ProgramContext = ProgramContext
+  { _programParser :: ProgramParser,
+    _builtins :: Builtins
+  }
 
 data CrossbowError
   = TooManyArgumentsError OpType Int Int
@@ -249,11 +261,13 @@ data OpType = OpType Text deriving (Show, Eq)
 newtype Valence = Valence Int deriving (Show, Eq)
 
 data OpImpl
-  = HSImpl ([Value] -> Value)
-  | HSImplIO ([Value] -> IO Value)
+  = HSImpl (ProgramParser -> [Value] -> Value)
+  | HSImplIO (ProgramParser -> [Value] -> IO Value)
   | CBImpl Text
 
 data Operator = Operator OpType Valence deriving (Show, Eq)
+
+data BindDir = BindFromLeft | BindFromRight
 
 isChar :: Value -> Bool
 isChar (VChar _) = True
