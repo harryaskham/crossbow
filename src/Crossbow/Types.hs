@@ -36,22 +36,18 @@ instance Enum Value where
   fromEnum = error "Use of fromEnum on Value"
 
 instance Semigroup Value where
-  a <> (VList b) = VList ((a <>) <$> b)
-  (VList a) <> b = VList (a <&> (<> b))
   (VInteger a) <> (VInteger b) = VInteger (a + b)
-  (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
-  a@(VInteger _) <> b = a <> castToInt b
   (VDouble a) <> (VDouble b) = VDouble (a + b)
+  (VInteger a) <> (VDouble b) = VDouble (fromIntegral a + b)
   (VDouble a) <> (VInteger b) = VDouble (a + fromIntegral b)
-  a@(VDouble _) <> b = a <> castToDouble b
   (VChar a) <> (VChar b) = VChar (chr $ ord a + ord b)
   a@(VChar _) <> (VList bs) = VList (a : bs)
-  a@(VChar _) <> b = a <> castToChar b
   (VList as) <> b@(VChar _) = VList (as ++ [b])
+  (VChar a) <> b = let VInteger v = castToInt b in VChar (chr $ ord a + fromIntegral v)
+  a <> (VChar b) = let VInteger v = castToInt a in VChar (chr $ fromIntegral v + ord b)
   (VList a) <> (VList b) = VList (getZipList $ (<>) <$> ZipList a <*> ZipList b)
-  a@(VBool _) <> b = a <> castToBool b
-  (VFunction f) <> _ = error $ "Cannot + unevaluated function: " <> show f
-  (VIdentifier i) <> _ = error $ "Cannot + unbound identifier"
+  a <> (VList b) = VList ((a <>) <$> b)
+  (VList a) <> b = VList (a <&> (<> b))
 
 instance Num Value where
   (+) = (<>)
