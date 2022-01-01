@@ -1,7 +1,7 @@
 module Main where
 
 import Crossbow.Builtin
-import Crossbow.Interpreter
+import Crossbow.Parser
 import Crossbow.Types
 import Crossbow.Util
 import Data.Text qualified as T

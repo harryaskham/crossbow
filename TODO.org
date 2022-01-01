@@ -2,7 +2,6 @@
 
 - Do Next
   - [ ] Parser should never evaluate, let's really separate this out
-  - [ ] Semantically rename Builtin/Interpret as Interpreter/Parser
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:

@@ -2,7 +2,7 @@ module Main where
 
 import Control.Exception
 import Crossbow.Builtin
-import Crossbow.Interpreter
+import Crossbow.Parser
 import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline

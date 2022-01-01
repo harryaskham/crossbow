@@ -1,4 +1,4 @@
-module Crossbow.Interpreter where
+module Crossbow.Parser where
 
 import Control.Exception qualified as E
 import Control.Monad (foldM)

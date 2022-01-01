@@ -18,7 +18,7 @@ cradle:
     - path: "app/Crossbow/Builtin.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "app/Crossbow/Interpreter.hs"
+    - path: "app/Crossbow/Parser.hs"
       component: "crossbow:exe:crossbow"
 
     - path: "src/Crossbow/Types.hs"
@@ -30,7 +30,7 @@ cradle:
     - path: "src/Crossbow/Builtin.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "src/Crossbow/Interpreter.hs"
+    - path: "src/Crossbow/Parser.hs"
       component: "crossbow:exe:crossbow"
 
     - path: "test"
