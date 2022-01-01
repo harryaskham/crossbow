@@ -20,6 +20,7 @@
   - [ ] Somehow separate parsing and evaluating. deepeval / runclauses should not be in parser
 - Language features
   - [ ] variadic, inverse function of monadic
+  - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
   - [ ] Let bindings
   - [ ] Binary with no args is repl, with args runs a source file
   - [ ] Lexical scoping
