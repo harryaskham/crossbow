@@ -324,9 +324,7 @@ builtins =
         )
       ),
       ("foldl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldl $0)}")),
-      ("foldr1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldr $0)}")),
-      ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
-      ("scanr1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanr $0)}")),
+      -- TODO: broken> ("foldr1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldr $0)}")),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
