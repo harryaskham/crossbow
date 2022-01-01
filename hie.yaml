@@ -15,7 +15,7 @@ cradle:
     - path: "app/Crossbow/Util.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "app/Crossbow/Builtin.hs"
+    - path: "app/Crossbow/Evaluator.hs"
       component: "crossbow:exe:crossbow"
 
     - path: "app/Crossbow/Parser.hs"
@@ -27,7 +27,7 @@ cradle:
     - path: "src/Crossbow/Util.hs"
       component: "crossbow:exe:crossbow"
 
-    - path: "src/Crossbow/Builtin.hs"
+    - path: "src/Crossbow/Evaluator.hs"
       component: "crossbow:exe:crossbow"
 
     - path: "src/Crossbow/Parser.hs"

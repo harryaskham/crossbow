@@ -86,7 +86,7 @@ library
     hs-source-dirs:     src
     exposed-modules:    Crossbow.Types,
                         Crossbow.Util,
-                        Crossbow.Builtin,
+                        Crossbow.Evaluator,
                         Crossbow.Parser
 
 executable crossbow
@@ -96,7 +96,7 @@ executable crossbow
                         src
     other-modules:      Crossbow.Types,
                         Crossbow.Util,
-                        Crossbow.Builtin,
+                        Crossbow.Evaluator,
                         Crossbow.Parser
 
 Test-Suite projectname-testsuite
@@ -107,7 +107,7 @@ Test-Suite projectname-testsuite
                         src
     other-modules:      Crossbow.Types,
                         Crossbow.Util,
-                        Crossbow.Builtin,
+                        Crossbow.Evaluator,
                         Crossbow.Parser
     build-depends:      QuickCheck,
                         HUnit

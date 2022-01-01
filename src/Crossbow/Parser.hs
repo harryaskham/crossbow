@@ -2,7 +2,7 @@ module Crossbow.Parser where
 
 import Control.Exception qualified as E
 import Control.Monad (foldM)
-import Crossbow.Builtin
+import Crossbow.Evaluator
   ( deepEval,
     getBound,
     identifierIx,

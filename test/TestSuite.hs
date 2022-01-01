@@ -1,6 +1,6 @@
 module Main where
 
-import Crossbow.Builtin
+import Crossbow.Evaluator
 import Crossbow.Parser
 import Crossbow.Types
 import Crossbow.Util

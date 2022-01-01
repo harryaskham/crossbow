@@ -1,7 +1,7 @@
 module Main where
 
 import Control.Exception
-import Crossbow.Builtin
+import Crossbow.Evaluator
 import Crossbow.Parser
 import Crossbow.Types
 import Data.Text qualified as T

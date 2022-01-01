@@ -1,4 +1,4 @@
-module Crossbow.Builtin where
+module Crossbow.Evaluator where
 
 import Control.Exception qualified as E
 import Control.Monad (foldM)
