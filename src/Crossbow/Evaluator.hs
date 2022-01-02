@@ -341,7 +341,7 @@ builtins =
       ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
       ("fold", (Valence 3, CBImpl "foldl")),
       ("scan", (Valence 3, CBImpl "scanl")),
-      ("transpose", (Valence 1, CBImpl "{if $0|cons (map (head) $0) (transpose (map (tail) $0))|[]}")),
+      ("transpose", (Valence 1, mkHSImpl (\[VList as] -> let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as)))),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
