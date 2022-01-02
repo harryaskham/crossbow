@@ -3,8 +3,9 @@
 - Do Next
   - [-] Syntax for mapping - a bang!?
     - [X] Initially working
-    - [ ] Double map-wrapping fails (int!!)
+    - [X] Double map-wrapping (int!!)
     - [ ] Mapbanging lambdas parses but not implemented yet
+    - [ ] sum!! x should work, but doesn't
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
@@ -25,11 +26,14 @@
   - [ ] Somehow separate parsing and evaluating. deepeval / runclauses should not be in parser
 - Language features
   - [ ] variadic, inverse function of monadic
+    - Give Valence a Variadic member where we just strictly apply until we have a value
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
-  - [ ] Let bindings
+    - can circumvent this by wrapping in {} for now e.g. {[+1,+2]}
+  - [ ] Let bindings; getting more and more useful
   - [ ] Binary with no args is repl, with args runs a source file
   - [ ] Lexical scoping
   - [ ] Move the standard library to a module system
+  - [ ] Automemoization for everything
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
   - [ ] Stack trace
