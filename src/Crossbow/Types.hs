@@ -244,6 +244,7 @@ instance Ord Value where
     Right v -> v
   _ <= (VList _) = error "Invalid Ord on list"
   (VList _) <= _ = error "Invalid Ord on list"
+  (VBool a) <= (VBool b) = a <= b
 
 data Argument = Unbound | Bound Value deriving (Show, Eq)
 

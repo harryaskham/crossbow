@@ -273,10 +273,8 @@ builtins =
       ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
       ("even", (Valence 1, CBImpl "{$0|odd|not}")),
       ("not", (Valence 1, CBImpl "if _ False True")),
-      -- TODO:
-      -- fold1 using lambda with head, tail
-      -- then redefine maximum and minimum in terms of fold1
       ("maximum", (Valence 1, CBImpl "foldl1 max")),
+      ("minimum", (Valence 1, CBImpl "foldl1 min")),
       ("maximumOn", (Valence 2, CBImpl "{foldl1 (maxOn $0) $1}")),
       ("minimumOn", (Valence 2, CBImpl "{foldl1 (minOn $0) $1}")),
       ("mode", (Valence 1, CBImpl "{counts|maximumOn snd|fst}")),
@@ -296,7 +294,6 @@ builtins =
             )
         )
       ),
-      --("foldl1" (Valence 2, CBImpl ( "[f,xs]|[id,fork 2]|[id,[head,tail]]|
       ( "foldr",
         ( Valence 3,
           HSImplIO
@@ -403,6 +400,13 @@ builtins =
                   . M.toList
                   . M.fromListWith (+)
                   $ [(a, 1) | a <- as]
+            )
+        )
+      ),
+      ( "bits",
+        ( Valence 1,
+          mkHSImpl
+            ( \[VList as] -> VInteger $ sum [2 ^ i | (i, b) <- zip [0 ..] (reverse as), truthy b]
             )
         )
       ),
