@@ -23,9 +23,7 @@ compile programParser t = case parse programParser "" . T.unpack $ t of
   Right cs -> runClauses programParser cs
 
 compileUnsafe :: P [IO Value] -> Text -> IO Value
-compileUnsafe programParser p = do
-  pE <- compile programParser p
-  return $ withPrettyError pE
+compileUnsafe programParser p = withPrettyError <$> compile programParser p
 
 runClauses :: P [IO Value] -> [IO Value] -> IO (Either CrossbowError Value)
 runClauses _ [] = return (Left EmptyProgramError)
