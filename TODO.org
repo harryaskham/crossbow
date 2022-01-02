@@ -1,7 +1,10 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Syntax for mapping - a bang!?
+  - [-] Syntax for mapping - a bang!?
+    - [X] Initially working
+    - [ ] Double map-wrapping fails (int!!)
+    - [ ] Mapbanging lambdas parses but not implemented yet
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:

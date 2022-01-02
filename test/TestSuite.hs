@@ -123,8 +123,13 @@ main = do
     (VList [VInteger 1690020, VInteger 1408487760])
 
   assertEvaluatesTo
-    "Day 3 (Part 1)"
+    "Day 3 (Part 1) 1"
     "aoc 3 | lines | transpose | map (map int) | fork 2 | [map mode, map antimode] | map bits | monadic *"
+    (VInteger 3320834)
+
+  assertEvaluatesTo
+    "Day 3 (Part 1) 2"
+    "aoc 3 | lines | transpose | map (int!) | fork 2 | [mode!, antimode!] | bits! | monadic *"
     (VInteger 3320834)
 
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
