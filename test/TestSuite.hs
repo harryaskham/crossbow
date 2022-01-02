@@ -135,7 +135,10 @@ main = do
     "aoc 3 | lines | transpose | int!! | fork 2 | [mode!, antimode!] | bits! | monadic *"
     (VInteger 3320834)
 
+-- TODO: needs a dowhile / until
 --assertEvaluatesTo "Day 3 (Part 2)" "aoc 3 | lines | int!! | fork 2 | [map {[$0, ix 0 $0]}, {map (ix 0)|mode}]" (VInteger 4481199)
+-- Runs one step:
+-- aoc 3 | lines | int!! | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
 --assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
 --assertEvaluatesTo "Day 5 (Part 1)" "" (VInteger 6225)
