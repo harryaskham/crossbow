@@ -24,6 +24,7 @@ import Crossbow.Types
     Valence (Valence),
     Value (..),
     castToInt,
+    withPrettyError,
   )
 import Crossbow.Util ((<$$>))
 import Data.Either.Extra (fromRight')
@@ -141,8 +142,8 @@ value =
         ignoreSpaces (string ":")
         bIO <- ignoreSpaces vNumber'
         return do
-          VInteger a <- fromRight' . castToInt <$> aIO
-          VInteger b <- fromRight' . castToInt <$> bIO
+          VInteger a <- withPrettyError . castToInt <$> aIO
+          VInteger b <- withPrettyError . castToInt <$> bIO
           return $ VList (VInteger <$> [a .. b])
     arg :: Reader ParseContext (P (IO Argument))
     arg = do
@@ -222,8 +223,15 @@ value =
                     ( HSImplIO
                         ( \pp args -> do
                             let csIO' = substituteArgs args <$> csIOWithInitial
-                            v <- runClauses pp csIO'
-                            fromRight' <$> deepEval pp (fromRight' v)
+                            vE <- runClauses pp csIO'
+                            -- TODO: Return to here once we enforce that OpImpl returns an Either
+                            case vE of
+                              Left e -> error (pretty e)
+                              Right v -> do
+                                deepVE <- deepEval pp v
+                                case deepVE of
+                                  Left e -> error (pretty e)
+                                  Right deepV -> return deepV
                         )
                     )
                     (replicate (max 1 numArgs) Unbound)

@@ -140,6 +140,8 @@ main = do
 -- Runs one step:
 -- aoc 3 | lines | int!! | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!
 -- aoc 3 | lines | int!! | fork 3 | [transpose, id, id] | [map (ix 0), map (ix 0), id] | first mode | {$0|first fork (length snd $0)} | monadic zip3 | filter (monadic {== $0 $1}) | thd
+-- Should do it, but fails why?
+-- aoc 3 | lines | int!! | fold {$0 | fork 3 | [transpose, id, id] | [map (ix $1), map (ix $1), id] | first mode | first (fork (length $0)) | monadic zip3 | filter (monadic ==) | thd!} _ (0:4)
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
 --assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
 --assertEvaluatesTo "Day 5 (Part 1)" "" (VInteger 6225)

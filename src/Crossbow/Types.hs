@@ -33,6 +33,12 @@ data CrossbowError
   | InternalError Text
   | EmptyProgramError
 
+-- TODO: Remove this when making entire REPL error-safe
+withPrettyError :: Either CrossbowError Value -> Value
+withPrettyError = \case
+  Left e -> error (pretty e)
+  Right v -> v
+
 instance Pretty CrossbowError where
   pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
   pretty (UncaughtParseError e) = "Parsing error: " <> show e

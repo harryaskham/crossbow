@@ -9,6 +9,7 @@
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight'
+      - [ ] withPrettyError
       - [X] unsafePerformIO
     - [ ] Remove partiality for builtins
       - Move to a new module

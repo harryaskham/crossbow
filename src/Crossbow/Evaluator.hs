@@ -25,7 +25,7 @@ compile programParser t = case parse programParser "" . T.unpack $ t of
 compileUnsafe :: P [IO Value] -> Text -> IO Value
 compileUnsafe programParser p = do
   pE <- compile programParser p
-  return $ fromRight' pE
+  return $ withPrettyError pE
 
 runClauses :: P [IO Value] -> [IO Value] -> IO (Either CrossbowError Value)
 runClauses _ [] = return (Left EmptyProgramError)
@@ -50,9 +50,9 @@ runClauses programParser (cIO : cIOs) = do
 -- Apply the second value to the first in left-to-right fashion.
 apply :: P [IO Value] -> Value -> Value -> IO Value
 -- If we have a function in program state, apply to the right
-apply programParser (VFunction f) v = fromRight' <$> applyF programParser f v BindFromLeft
+apply programParser (VFunction f) v = withPrettyError <$> applyF programParser f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
-apply programParser v (VFunction f) = fromRight' <$> applyF programParser f v BindFromRight
+apply programParser v (VFunction f) = withPrettyError <$> applyF programParser f v BindFromRight
 -- Application of lists tries to ziplist
 apply programParser (VList as@((VFunction _) : _)) (VList bs) =
   do
@@ -60,7 +60,7 @@ apply programParser (VList as@((VFunction _) : _)) (VList bs) =
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
     rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromLeft
-    return . VList . fmap fromRight' . getZipList $ rs
+    return . VList . fmap withPrettyError . getZipList $ rs
 -- Fork values with post-application of applicatives should work the same way
 apply programParser (VList bs) (VList as@((VFunction _) : _)) =
   do
@@ -68,7 +68,7 @@ apply programParser (VList bs) (VList as@((VFunction _) : _)) =
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
     rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromRight
-    return . VList . fmap fromRight' . getZipList $ rs
+    return . VList . fmap withPrettyError . getZipList $ rs
 
 -- If we have a value with a value, just override it
 apply _ _ v = return v
@@ -221,7 +221,7 @@ builtins =
           HSImplIO
             ( \pp [VInteger n, VFunction f, VList as] -> do
                 let vas = V.fromList as
-                a' <- fromRight' <$> applyF pp f (vas V.! fromInteger n) BindFromLeft
+                a' <- withPrettyError <$> applyF pp f (vas V.! fromInteger n) BindFromLeft
                 let vas' = vas V.// [(fromInteger n, a')]
                 return (VList $ V.toList vas')
             )
@@ -241,7 +241,7 @@ builtins =
             ( let map _ [_, VList []] = return $ VList []
                   map pp [VFunction f, VList (x : xs)] = do
                     x' <- applyF pp f x BindFromLeft
-                    vCons (fromRight' x') <$> map pp [VFunction f, VList xs]
+                    vCons (withPrettyError x') <$> map pp [VFunction f, VList xs]
                in map
             )
         )
@@ -252,7 +252,7 @@ builtins =
           HSImplIO
             ( let filter _ [_, VList []] = return $ VList []
                   filter pp [VFunction f, VList (x : xs)] = do
-                    x' <- fromRight' <$> applyF pp f x BindFromLeft
+                    x' <- withPrettyError <$> applyF pp f x BindFromLeft
                     if truthy x'
                       then vCons x <$> filter pp [VFunction f, VList xs]
                       else filter pp [VFunction f, VList xs]
@@ -269,7 +269,7 @@ builtins =
             )
         )
       ),
-      ("if", (Valence 3, mkHSImpl (\[p, a, b] -> let (VBool p') = fromRight' $ castToBool p in if p' then a else b))),
+      ("if", (Valence 3, mkHSImpl (\[p, a, b] -> let (VBool p') = withPrettyError $ castToBool p in if p' then a else b))),
       ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"++_)|(_++\".txt\")|read}")),
       ("sum", (Valence 1, CBImpl "foldl|+|0")),
       ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
@@ -288,8 +288,8 @@ builtins =
             ( \pp [VFunction f, acc, VList xs] ->
                 foldlM
                   ( \acc x -> do
-                      (VFunction f') <- fromRight' <$> applyF pp f acc BindFromLeft
-                      fromRight' <$> applyF pp f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
+                      withPrettyError <$> applyF pp f' x BindFromLeft
                   )
                   acc
                   xs
@@ -302,8 +302,8 @@ builtins =
             ( \pp [VFunction f, VList xs, acc] ->
                 foldrM
                   ( \acc x -> do
-                      (VFunction f') <- fromRight' <$> applyF pp f acc BindFromLeft
-                      fromRight' <$> applyF pp f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
+                      withPrettyError <$> applyF pp f' x BindFromLeft
                   )
                   acc
                   xs
@@ -318,8 +318,8 @@ builtins =
                   scanl'
                     ( \accM x -> do
                         acc <- accM
-                        (VFunction f') <- fromRight' <$> applyF pp f acc BindFromLeft
-                        fromRight' <$> applyF pp f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
+                        withPrettyError <$> applyF pp f' x BindFromLeft
                     )
                     (pure acc)
                     xs
@@ -334,8 +334,8 @@ builtins =
                   scanr
                     ( \x accM -> do
                         acc <- accM
-                        (VFunction f') <- fromRight' <$> applyF pp f acc BindFromLeft
-                        fromRight' <$> applyF pp f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
+                        withPrettyError <$> applyF pp f' x BindFromLeft
                     )
                     (pure acc)
                     xs
@@ -353,8 +353,8 @@ builtins =
           HSImplIO
             ( \pp [VFunction f, a, b] ->
                 do
-                  (VFunction f') <- fromRight' <$> applyF pp f b BindFromLeft
-                  fromRight' <$> applyF pp f' a BindFromLeft
+                  (VFunction f') <- withPrettyError <$> applyF pp f b BindFromLeft
+                  withPrettyError <$> applyF pp f' a BindFromLeft
             )
         )
       ),
@@ -363,11 +363,11 @@ builtins =
         ( Valence 2,
           HSImplIO
             ( \pp [VFunction f, a] ->
-                fromRight' <$> applyF pp f a BindFromLeft
+                withPrettyError <$> applyF pp f a BindFromLeft
             )
         )
       ),
-      ("fork", (Valence 2, mkHSImpl (\[n, a] -> let VInteger n' = fromRight' . castToInt $ n in VList (replicate (fromInteger n') a)))),
+      ("fork", (Valence 2, mkHSImpl (\[n, a] -> let VInteger n' = withPrettyError . castToInt $ n in VList (replicate (fromInteger n') a)))),
       ( "monadic",
         ( Valence 2,
           HSImplIO
@@ -376,7 +376,7 @@ builtins =
                   ( \v a -> do
                       case v of
                         VFunction f ->
-                          fromRight' <$> applyF pp f a BindFromLeft
+                          withPrettyError <$> applyF pp f a BindFromLeft
                         _ -> return v
                   )
                   (VFunction f)
@@ -387,10 +387,10 @@ builtins =
       ("lines", (Valence 1, mkHSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.lines (unchar <$> t)))))),
       ("words", (Valence 1, mkHSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.words (unchar <$> t)))))),
       ("ints", (Valence 1, CBImpl "{lines|int}")),
-      ("int", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToInt $ a))),
-      ("double", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToDouble $ a))),
-      ("char", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToChar $ a))),
-      ("bool", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToBool $ a))),
+      ("int", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToInt $ a))),
+      ("double", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToDouble $ a))),
+      ("char", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToChar $ a))),
+      ("bool", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToBool $ a))),
       ("string", (Valence 1, mkHSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
       ( "counts",
         ( Valence 1,
