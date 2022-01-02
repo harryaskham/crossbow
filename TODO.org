@@ -1,11 +1,6 @@
 #+TITLE: TODO
 
 - Do Next
-  - [-] Syntax for mapping - a bang!?
-    - [X] Initially working
-    - [X] Double map-wrapping (int!!)
-    - [ ] Mapbanging lambdas parses but not implemented yet
-    - [ ] sum!! x should work, but doesn't
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
@@ -38,7 +33,10 @@
   - [ ] Shortcuts for referring to output of previous line / assignment
   - [ ] Stack trace
   - [ ] range syntax with variable endpoints
+    - for now use range function
+  - [ ] mapbang for lambdas
   - [X] Program fragments as lambdas
+  - [X] Syntax for mapping - a bang!?
     - Either monadic (args as a list) or variadic (how?)
     - Allow parsing subprograms in parens
   - [X] Spaces in lists are allowed
