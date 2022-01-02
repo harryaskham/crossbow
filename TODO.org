@@ -2,23 +2,21 @@
 
 - Do Next
   - [ ] 'apply' should be an Either, which will bubble up far
+    - Introduce more withPrettyError at first
+    - We'll take these out in a second step
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
-      - [ ] fromRight'
+      - [ ] fromRight' (on e.g. Text.Read)
       - [ ] withPrettyError
       - [X] unsafePerformIO
-    - [ ] Remove partiality for builtins
+    - [ ] Exhausive Instances (Semigroup)
+    - [ ] Remove partiality for builtins - OpImpl returns Either
       - Move to a new module
       - Give each its own line
       - Each then gets enough space to error out on a bad valence match
       - Can also handle errors more nicely inside
-    - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
-    - [ ] Exhausive Semigroup
-    - [X] Exhaustive Num
     - [ ] Finally take out all compiler warnings
-  - [ ] Implement strictness properly; we are not evaluating our arguments while binding
-    - Negate shoudl not be called on a function; somehow we're not substituting properly
-  - [ ] Somehow separate parsing and evaluating. deepeval / runclauses should not be in parser
+      - Remove partiality in functions and handle appropriately
 - Language features
   - [ ] variadic, inverse function of monadic
     - Give Valence a Variadic member where we just strictly apply until we have a value
@@ -34,7 +32,9 @@
   - [ ] Stack trace
   - [ ] range syntax with variable endpoints
     - for now use range function
-  - [ ] mapbang for lambdas
+  - [X] mapbang for lambdas
+    - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
+    - [X] Exhaustive Num
   - [X] Program fragments as lambdas
   - [X] Syntax for mapping - a bang!?
     - Either monadic (args as a list) or variadic (how?)
