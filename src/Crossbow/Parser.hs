@@ -74,7 +74,7 @@ clauseDivider = ignoreSpaces (char '|')
 clauses :: Reader ParseContext ProgramParser
 clauses = do
   value' <- value
-  return $ value' `sepBy1` clauseDivider
+  return $ value' `sepBy` clauseDivider
 
 program :: Reader ParseContext ProgramParser
 program = clauses

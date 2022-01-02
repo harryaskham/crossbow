@@ -40,17 +40,19 @@ runClauses programParser (cIO : cIOs) = do
     go vIO (cIO : cIOs) = do
       v <- vIO
       c <- cIO
-      exE <- E.try (apply programParser v c) :: (IO (Either SomeException Value))
+      exE <- E.try (apply programParser v c) :: (IO (Either SomeException (Either CrossbowError Value)))
       case exE of
         Left e -> return . Left $ InternalError (show e)
-        Right v' -> go (return v') cIOs
+        Right vE -> case vE of
+          Left e -> return $ Left e
+          Right v -> go (return v) cIOs
 
 -- Apply the second value to the first in left-to-right fashion.
-apply :: P [IO Value] -> Value -> Value -> IO Value
+apply :: P [IO Value] -> Value -> Value -> IO (Either CrossbowError Value)
 -- If we have a function in program state, apply to the right
-apply programParser (VFunction f) v = withPrettyError <$> applyF programParser f v BindFromLeft
+apply programParser (VFunction f) v = applyF programParser f v BindFromLeft
 -- If we have a value in program state and encounter a function, apply it
-apply programParser v (VFunction f) = withPrettyError <$> applyF programParser f v BindFromRight
+apply programParser v (VFunction f) = applyF programParser f v BindFromRight
 -- Application of lists tries to ziplist
 apply programParser (VList as@((VFunction _) : _)) (VList bs) =
   do
@@ -58,7 +60,9 @@ apply programParser (VList as@((VFunction _) : _)) (VList bs) =
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
     rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromLeft
-    return . VList . fmap withPrettyError . getZipList $ rs
+    case partitionEithers (getZipList rs) of
+      ([], rs) -> return $ Right $ VList rs
+      (es, _) -> return $ Left $ ApplyError es
 -- Fork values with post-application of applicatives should work the same way
 apply programParser (VList bs) (VList as@((VFunction _) : _)) =
   do
@@ -66,10 +70,12 @@ apply programParser (VList bs) (VList as@((VFunction _) : _)) =
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
     rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromRight
-    return . VList . fmap withPrettyError . getZipList $ rs
+    case partitionEithers (getZipList rs) of
+      ([], rs) -> return $ Right $ VList rs
+      (es, _) -> return $ Left $ ApplyError es
 
 -- If we have a value with a value, just override it
-apply _ _ v = return v
+apply _ _ v = return $ Right v
 
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
@@ -114,7 +120,7 @@ runCBImpl programParser cbF argVals = do
   case pE of
     Left e -> return $ Left e
     Right f -> do
-      result <- foldM (apply programParser) f argVals
+      result <- foldM (\acc x -> withPrettyError <$> apply programParser acc x) f argVals
       return $ Right result
 
 evalF :: P [IO Value] -> Value -> IO (Either CrossbowError Value)

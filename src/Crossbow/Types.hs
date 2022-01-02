@@ -32,6 +32,7 @@ data CrossbowError
   | CastToBoolError Value
   | InternalError Text
   | EmptyProgramError
+  | ApplyError [CrossbowError]
 
 -- TODO: Remove this when making entire REPL error-safe
 withPrettyError :: Either CrossbowError Value -> Value
