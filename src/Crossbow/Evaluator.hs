@@ -185,6 +185,7 @@ builtins =
       ("*", (Valence 2, mkHSImpl (\[a, b] -> a * b))),
       ("^", (Valence 2, mkHSImpl (\[a, b] -> a ^ b))),
       ("-", (Valence 2, mkHSImpl (\[a, b] -> a - b))),
+      ("abs", (Valence 1, mkHSImpl (\[a] -> abs a))),
       ("negate", (Valence 1, mkHSImpl (\[a] -> negate a))),
       ("mod", (Valence 2, mkHSImpl (\[a, b] -> a `mod` b))),
       ("div", (Valence 2, mkHSImpl (\[a, b] -> a `div` b))),
@@ -196,6 +197,8 @@ builtins =
       (":", (Valence 2, mkHSImpl (\[a, b] -> vCons a b))),
       ("min", (Valence 2, mkHSImpl (\[a, b] -> min a b))),
       ("max", (Valence 2, mkHSImpl (\[a, b] -> max a b))),
+      ("minOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic <= |if _ $1 $2}")),
+      ("maxOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic > |if _ $1 $2}")),
       -- TODO: Redefine all the below using crossbow folds, maps, filters
       ("id", (Valence 1, mkHSImpl (\[a] -> a))),
       ("const", (Valence 2, mkHSImpl (\[a, _] -> a))),
@@ -274,7 +277,10 @@ builtins =
       -- fold1 using lambda with head, tail
       -- then redefine maximum and minimum in terms of fold1
       ("maximum", (Valence 1, CBImpl "foldl1 max")),
-      ("minimum", (Valence 1, CBImpl "foldl1 min")),
+      ("maximumOn", (Valence 2, CBImpl "{foldl1 (maxOn $0) $1}")),
+      ("minimumOn", (Valence 2, CBImpl "{foldl1 (minOn $0) $1}")),
+      ("mode", (Valence 1, CBImpl "{counts|maximumOn snd|fst}")),
+      ("antimode", (Valence 1, CBImpl "{counts|minimumOn snd|fst}")),
       ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),
       ( "foldl",
         ( Valence 3,
@@ -387,6 +393,19 @@ builtins =
       ("char", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToChar $ a))),
       ("bool", (Valence 1, mkHSImpl (\[a] -> fromRight' . castToBool $ a))),
       ("string", (Valence 1, mkHSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
+      ( "counts",
+        ( Valence 1,
+          mkHSImpl
+            ( \[VList as] ->
+                VList
+                  . fmap (\(a, b) -> VList [a, b])
+                  . fmap (second VInteger)
+                  . M.toList
+                  . M.fromListWith (+)
+                  $ [(a, 1) | a <- as]
+            )
+        )
+      ),
       ( "read",
         ( Valence 1,
           mkHSImplIO

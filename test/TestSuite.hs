@@ -122,7 +122,13 @@ main = do
     "aoc 2 | lines | map {words|second int|first fst} | map {$0|ix 0|case _ [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | fork 2 | [{sum | monadic *}, fold {$0|first (+ (fst $1))|second (+ (* (fst $1) (thd $0)))|third (+ (snd $1))} [0,0,0]] | second {take 2 | monadic *}"
     (VList [VInteger 1690020, VInteger 1408487760])
 
---assertEvaluatesTo "Day 3 (Part 1)" "" (VInteger 3320834)
+  -- TODO: mode, antimode, bits
+  -- TODO: requires sort, sorton, counts, maximumon
+  assertEvaluatesTo
+    "Day 3 (Part 1)"
+    "aoc 3 | lines | transpose | map (map {int|bool}) | fork 2 | [map mode, map antimode] | map bits | monadic *"
+    (VInteger 3320834)
+
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
 --assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
