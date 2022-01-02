@@ -219,17 +219,18 @@ value =
                   0 -> pure (VIdentifier "$0") : csIO
                   _ -> csIO
           return $
-            ( Function
-                Nothing
-                ( HSImplIO
-                    ( \pp args -> do
-                        let csIO' = substituteArgs args <$> csIOWithInitial
-                        v <- runClauses pp csIO'
-                        fromRight' <$> deepEval pp (fromRight' v)
-                    )
-                )
-                (replicate (max 1 numArgs) Unbound)
-            )
+            VFunction
+              ( Function
+                  Nothing
+                  ( HSImplIO
+                      ( \pp args -> do
+                          let csIO' = substituteArgs args <$> csIOWithInitial
+                          v <- runClauses pp csIO'
+                          fromRight' <$> deepEval pp (fromRight' v)
+                      )
+                  )
+                  (replicate (max 1 numArgs) Unbound)
+              )
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
