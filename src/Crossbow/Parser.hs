@@ -158,13 +158,13 @@ value =
         return do
           char '('
           a1IO <- arg'
-          op <- operator'
+          (op, mapDepth) <- operator'
           a2IO <- arg'
           char ')'
           return do
             a1 <- a1IO
             a2 <- a2IO
-            case runReader (mkFuncL op [a1, a2]) pc of
+            case runReader (mkFuncL op mapDepth [a1, a2]) pc of
               Left e -> fail (T.unpack $ pretty e)
               Right f -> return $ VFunction f
     -- A polish notation left-applied func with maybe unbound variables
@@ -174,11 +174,11 @@ value =
       operator' <- operator
       arg' <- arg
       return do
-        op <- operator'
+        (op, mapDepth) <- operator'
         argsIO <- many1 arg'
         return do
           args <- sequence argsIO
-          case runReader (mkFuncL op args) pc of
+          case runReader (mkFuncL op mapDepth args) pc of
             Left e -> fail (T.unpack $ pretty e)
             Right f -> return $ VFunction f
     -- Finally, a func with no arguments
@@ -187,8 +187,8 @@ value =
       pc <- ask
       operator' <- operator
       return do
-        op <- operator'
-        let f = runReader (mkFunc op) pc
+        (op, mapDepth) <- operator'
+        let f = runReader (mkFunc op mapDepth) pc
         return . return $ VFunction f
     vFunction :: ValueParser
     vFunction =
@@ -207,6 +207,7 @@ value =
         char '{'
         csIO <- clauses'
         char '}'
+        mapBangs <- many (char '!')
         return do
           numArgs <- do
             cs <- sequence csIO
@@ -218,18 +219,17 @@ value =
                   0 -> pure (VIdentifier "$0") : csIO
                   _ -> csIO
           return $
-            VFunction
-              ( Function
-                  Nothing
-                  ( HSImplIO
-                      ( \pp args -> do
-                          let csIO' = substituteArgs args <$> csIOWithInitial
-                          v <- runClauses pp csIO'
-                          fromRight' <$> deepEval pp (fromRight' v)
-                      )
-                  )
-                  (replicate (max 1 numArgs) Unbound)
-              )
+            ( Function
+                Nothing
+                ( HSImplIO
+                    ( \pp args -> do
+                        let csIO' = substituteArgs args <$> csIOWithInitial
+                        v <- runClauses pp csIO'
+                        fromRight' <$> deepEval pp (fromRight' v)
+                    )
+                )
+                (replicate (max 1 numArgs) Unbound)
+            )
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
@@ -239,27 +239,36 @@ maxArgIx (VFunction f@Function {}) =
     ixs -> Just $ L.maximum ixs
 maxArgIx _ = Nothing
 
-mkFunc :: Operator -> Reader ParseContext Function
-mkFunc (Operator (OpType t) (Valence v)) = do
+-- TODO: Gracefully handle non-single args
+mapWrap :: Int -> Function -> Reader ParseContext Function
+mapWrap 0 f = return f
+mapWrap n f@(Function _ _ [arg]) = do
+  builtins <- ask
+  let (_, mapImpl) = builtins M.! "map"
+  mapWrap (n - 1) (Function (Just "map") mapImpl [Bound (VFunction f), arg])
+
+mkFunc :: Operator -> Int -> Reader ParseContext Function
+mkFunc (Operator (OpType t) (Valence v)) mapDepth = do
   builtins <- ask
   let (_, impl) = builtins M.! t
-  return $ Function (Just t) impl (replicate v Unbound)
+  mapWrap mapDepth $ Function (Just t) impl (replicate v Unbound)
 
-mkFuncL :: Operator -> [Argument] -> Reader ParseContext (Either CrossbowError Function)
-mkFuncL (Operator o@(OpType t) (Valence v)) args = do
+mkFuncL :: Operator -> Int -> [Argument] -> Reader ParseContext (Either CrossbowError Function)
+mkFuncL (Operator o@(OpType t) (Valence v)) mapDepth args = do
   builtins <- ask
   let (_, impl) = builtins M.! t
   if
       | length args > v -> return . Left $ TooManyArgumentsError o v (length args)
-      | length args < v -> return . Right $ Function (Just t) impl (args ++ replicate (v - length args) Unbound)
-      | otherwise -> return . Right $ Function (Just t) impl args
+      | length args < v -> Right <$> mapWrap mapDepth (Function (Just t) impl (args ++ replicate (v - length args) Unbound))
+      | otherwise -> Right <$> mapWrap mapDepth (Function (Just t) impl args)
 
-operator :: Reader ParseContext (P Operator)
+operator :: Reader ParseContext (P (Operator, Int))
 operator = do
   builtins <- ask
   return $
     ignoreSpaces $ do
       -- We parse in favour of longer names first to avoid max/maximum clashes
       k <- T.pack <$> firstOf (string . T.unpack <$> sortOn (Down . T.length) (M.keys builtins))
+      mapBangs <- many (char '!')
       let (v, _) = builtins M.! k
-      return $ Operator (OpType k) v
+      return $ (Operator (OpType k) v, length mapBangs)
