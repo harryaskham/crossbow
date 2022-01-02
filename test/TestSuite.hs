@@ -135,7 +135,7 @@ main = do
     "aoc 3 | lines | transpose | int!! | fork 2 | [mode!, antimode!] | bits! | monadic *"
     (VInteger 3320834)
 
---assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
+--assertEvaluatesTo "Day 3 (Part 2)" "aoc 3 | lines | int!!" (VInteger 4481199)
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
 --assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
 --assertEvaluatesTo "Day 5 (Part 1)" "" (VInteger 6225)
