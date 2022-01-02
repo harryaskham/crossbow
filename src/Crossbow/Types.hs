@@ -248,11 +248,11 @@ instance Ord Value where
 
 data Argument = Unbound | Bound Value deriving (Show, Eq)
 
-data Function = Function (Maybe Text) OpImpl [Argument]
+data Function = Function (Maybe Text) Valence OpImpl [Argument]
 
 instance Show Function where
-  showsPrec i (Function (Just n) _ args) = showsPrec i (n, args)
-  showsPrec i (Function Nothing _ args) = showsPrec i ("<function>", args)
+  showsPrec i (Function (Just n) _ _ args) = showsPrec i (n, args)
+  showsPrec i (Function Nothing _ k_ args) = showsPrec i ("<function>", args)
 
 instance Eq Function where
   (==) = error "Function equality"
@@ -293,7 +293,7 @@ instance Pretty Value where
   pretty (VIdentifier i) = i
 
 instance Pretty Function where
-  pretty (Function name _ args) =
+  pretty (Function name _ _ args) =
     let n = fromMaybe "<function>" name
      in "(" <> n <> " " <> T.intercalate "," (pretty <$> args) <> ")"
 

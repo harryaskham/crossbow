@@ -75,20 +75,20 @@ apply _ _ v = return v
 
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
-bindNext f@(Function t impl args) v bindDir =
+bindNext f@(Function t valence impl args) v bindDir =
   case bindDir of
-    BindFromLeft -> Function t impl (reverse . fst $ foldl' bindArg ([], False) args)
-    BindFromRight -> Function t impl (fst $ foldr (flip bindArg) ([], False) args)
+    BindFromLeft -> Function t valence impl (reverse . fst $ foldl' bindArg ([], False) args)
+    BindFromRight -> Function t valence impl (fst $ foldr (flip bindArg) ([], False) args)
   where
     bindArg (args, True) a = (a : args, True)
     bindArg (args, False) a@(Bound _) = (a : args, False)
     bindArg (args, False) Unbound = (Bound v : args, True)
 
 getUnbound :: Function -> [Argument]
-getUnbound (Function _ _ args) = filter (== Unbound) args
+getUnbound (Function _ _ _ args) = filter (== Unbound) args
 
 getBound :: Function -> [Argument]
-getBound (Function _ _ args) = filter (/= Unbound) args
+getBound (Function _ _ _ args) = filter (/= Unbound) args
 
 -- Either partially bind this value, or if it's fully applied, evaluate it down
 applyF :: P [IO Value] -> Function -> Value -> BindDir -> IO (Either CrossbowError Value)
@@ -120,7 +120,7 @@ runCBImpl programParser cbF argVals = do
       return $ Right result
 
 evalF :: P [IO Value] -> Value -> IO (Either CrossbowError Value)
-evalF programParser vf@(VFunction f@(Function _ impl args))
+evalF programParser vf@(VFunction f@(Function _ _ impl args))
   -- If we're not fully bound, this is as far as we can go
   | not (null $ getUnbound f) = return $ Right vf
   -- If we have any bound identifier variables variables we can't eval down any further either
@@ -145,9 +145,9 @@ substituteArgs subs vIO = do
   case v of
     i@(VIdentifier _) -> return $ subs !! identifierIx i
     (VList as) -> VList <$> sequence (substituteArgs subs . pure <$> as)
-    (VFunction (Function n impl args)) -> do
+    (VFunction (Function n valence impl args)) -> do
       args' <- traverse (substituteBoundArg subs) args
-      return $ VFunction (Function n impl args')
+      return $ VFunction (Function n valence impl args')
     _ -> return v
   where
     substituteBoundArg _ Unbound = return Unbound
@@ -160,12 +160,12 @@ deepEvalArg _ Unbound = return . return $ Unbound
 -- Deeply evaluate the given value.
 -- Ensure if this is a function that all arguments are strictly evaluated.
 deepEval :: P [IO Value] -> Value -> IO (Either CrossbowError Value)
-deepEval programParser (VFunction (Function name impl args)) =
+deepEval programParser (VFunction (Function name valence impl args)) =
   do
     (errors, argsStrict) <- partitionEithers <$> traverse (deepEvalArg programParser) args
     if not (null errors)
       then return . Left $ L.head errors
-      else evalF programParser (VFunction (Function name impl argsStrict))
+      else evalF programParser (VFunction (Function name valence impl argsStrict))
 deepEval programParser (VList as) = do
   as <- traverse (deepEval programParser) as
   return . fmap VList $ sequence as

@@ -152,21 +152,19 @@ value =
     vFuncBin :: ValueParser
     vFuncBin =
       do
-        pc <- ask
         arg' <- arg
-        operator' <- operator
+        vFunc' <- vFunc
         return do
           char '('
           a1IO <- arg'
-          (op, mapDepth) <- operator'
+          vfIO <- vFunc'
           a2IO <- arg'
           char ')'
           return do
             a1 <- a1IO
+            (VFunction (Function n v i _)) <- vfIO
             a2 <- a2IO
-            case runReader (mkFuncL op mapDepth [a1, a2]) pc of
-              Left e -> fail (T.unpack $ pretty e)
-              Right f -> return $ VFunction f
+            return (VFunction (Function n v i [a1, a2]))
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: ValueParser
     vFuncL = do
@@ -176,9 +174,9 @@ value =
         vfIO <- vFunc'
         argsIO <- many1 arg'
         return do
-          VFunction (Function n i _) <- vfIO
+          VFunction (Function n valence@(Valence v) i _) <- vfIO
           args <- sequence argsIO
-          return (VFunction (Function n i args))
+          return (VFunction (Function n valence i (args ++ replicate (v - length args) Unbound)))
     -- Finally, a func with no arguments
     vFunc :: ValueParser
     vFunc = do
@@ -221,6 +219,7 @@ value =
             ( VFunction
                 ( Function
                     Nothing
+                    (Valence (max 1 numArgs))
                     ( HSImplIO
                         ( \pp args -> do
                             let csIO' = substituteArgs args <$> csIOWithInitial
@@ -240,34 +239,18 @@ maxArgIx (VFunction f@Function {}) =
     ixs -> Just $ L.maximum ixs
 maxArgIx _ = Nothing
 
--- TODO: Gracefully handle non-single args
 mapWrap :: Int -> Function -> Reader ParseContext Function
 mapWrap 0 f = return f
 mapWrap n f = do
   builtins <- ask
-  let (_, mapImpl) = builtins M.! "map"
-  mapWrap (n - 1) (Function (Just "map") mapImpl [Bound (VFunction f), Unbound])
+  let (valence, mapImpl) = builtins M.! "map"
+  mapWrap (n - 1) (Function (Just "map") valence mapImpl [Bound (VFunction f), Unbound])
 
 mkFunc :: Operator -> Int -> Reader ParseContext Function
 mkFunc (Operator (OpType t) (Valence v)) mapDepth = do
   builtins <- ask
-  let (_, impl) = builtins M.! t
-  mapWrap mapDepth $ Function (Just t) impl (replicate v Unbound)
-
-mkFuncL :: Operator -> Int -> [Argument] -> Reader ParseContext (Either CrossbowError Function)
-mkFuncL (Operator o@(OpType t) (Valence v)) mapDepth args = do
-  builtins <- ask
-  let (_, impl) = builtins M.! t
-  if
-      | length args > v -> return . Left $ TooManyArgumentsError o v (length args)
-      | otherwise -> case mapDepth of
-        0 -> return . Right $ Function (Just t) impl (args ++ replicate (v - length args) Unbound)
-        _ -> do
-          (Function t' impl' args') <- mapWrap mapDepth (Function (Just t) impl args)
-          -- Unwrap the mapWrap to just pull out the function, which we trust we can apply to
-          -- the original arguments
-          let (f : _) = args'
-          return . Right $ Function t' impl' (f : args) -- Here we don't do a valence-check on map; if we mapbanged we might have wrong valence
+  let (valence, impl) = builtins M.! t
+  mapWrap mapDepth $ Function (Just t) valence impl (replicate v Unbound)
 
 operator :: Reader ParseContext (P (Operator, Int))
 operator = do
