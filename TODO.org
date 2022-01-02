@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Syntax for mapping - a bang!?
   - [ ] 'apply' should be an Either, which will bubble up far
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
