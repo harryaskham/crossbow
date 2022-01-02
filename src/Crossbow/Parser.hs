@@ -204,7 +204,6 @@ value =
         csIO <- clauses'
         char '}'
         -- TODO: Use these
-        mapBangs <- many (char '!')
         return do
           numArgs <- do
             cs <- sequence csIO
