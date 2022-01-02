@@ -208,7 +208,9 @@ builtins =
       ("take", (Valence 2, mkHSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
       ("head", (Valence 1, mkHSImpl (\[VList as] -> L.head as))),
       ("tail", (Valence 1, mkHSImpl (\[VList as] -> VList $ L.tail as))),
+      -- TODO: Make zip variadic
       ("zip", (Valence 2, mkHSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
+      ("zip3", (Valence 3, mkHSImpl (\[VList as, VList bs, VList cs] -> VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs)))),
       ("pairs", (Valence 1, CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}")),
       ("square", (Valence 1, CBImpl "{$0|length|flip fork|$0}")),
       ("enum", (Valence 1, CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}")),

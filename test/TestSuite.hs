@@ -139,6 +139,7 @@ main = do
 --assertEvaluatesTo "Day 3 (Part 2)" "aoc 3 | lines | int!! | fork 2 | [map {[$0, ix 0 $0]}, {map (ix 0)|mode}]" (VInteger 4481199)
 -- Runs one step:
 -- aoc 3 | lines | int!! | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!
+-- aoc 3 | lines | int!! | fork 3 | [transpose, id, id] | [map (ix 0), map (ix 0), id] | first mode | {$0|first fork (length snd $0)} | monadic zip3 | filter (monadic {== $0 $1}) | thd
 --assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
 --assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
 --assertEvaluatesTo "Day 5 (Part 1)" "" (VInteger 6225)
