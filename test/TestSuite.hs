@@ -124,7 +124,7 @@ main = do
 
   assertEvaluatesTo
     "Day 3 (Part 1)"
-    "aoc 3 | lines | transpose | map (map {int|bool}) | fork 2 | [map mode, map antimode] | map bits | monadic *"
+    "aoc 3 | lines | transpose | map (map int) | fork 2 | [map mode, map antimode] | map bits | monadic *"
     (VInteger 3320834)
 
 --assertEvaluatesTo "Day 3 (Part 2)" "" (VInteger 4481199)
