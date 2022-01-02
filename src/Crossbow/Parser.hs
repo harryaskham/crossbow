@@ -170,17 +170,15 @@ value =
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: ValueParser
     vFuncL = do
-      pc <- ask
-      operator' <- operator
       arg' <- arg
+      vFunc' <- vFunc
       return do
-        (op, mapDepth) <- operator'
+        vfIO <- vFunc'
         argsIO <- many1 arg'
         return do
+          VFunction (Function n i _) <- vfIO
           args <- sequence argsIO
-          case runReader (mkFuncL op mapDepth args) pc of
-            Left e -> fail (T.unpack $ pretty e)
-            Right f -> return $ VFunction f
+          return (VFunction (Function n i args))
     -- Finally, a func with no arguments
     vFunc :: ValueParser
     vFunc = do
@@ -207,6 +205,7 @@ value =
         char '{'
         csIO <- clauses'
         char '}'
+        -- TODO: Use these
         mapBangs <- many (char '!')
         return do
           numArgs <- do
@@ -218,19 +217,20 @@ value =
                 case numArgs of
                   0 -> pure (VIdentifier "$0") : csIO
                   _ -> csIO
-          return $
-            VFunction
-              ( Function
-                  Nothing
-                  ( HSImplIO
-                      ( \pp args -> do
-                          let csIO' = substituteArgs args <$> csIOWithInitial
-                          v <- runClauses pp csIO'
-                          fromRight' <$> deepEval pp (fromRight' v)
-                      )
-                  )
-                  (replicate (max 1 numArgs) Unbound)
-              )
+          return
+            ( VFunction
+                ( Function
+                    Nothing
+                    ( HSImplIO
+                        ( \pp args -> do
+                            let csIO' = substituteArgs args <$> csIOWithInitial
+                            v <- runClauses pp csIO'
+                            fromRight' <$> deepEval pp (fromRight' v)
+                        )
+                    )
+                    (replicate (max 1 numArgs) Unbound)
+                )
+            )
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
@@ -243,10 +243,10 @@ maxArgIx _ = Nothing
 -- TODO: Gracefully handle non-single args
 mapWrap :: Int -> Function -> Reader ParseContext Function
 mapWrap 0 f = return f
-mapWrap n f@(Function _ _ [arg]) = do
+mapWrap n f = do
   builtins <- ask
   let (_, mapImpl) = builtins M.! "map"
-  mapWrap (n - 1) (Function (Just "map") mapImpl [Bound (VFunction f), arg])
+  mapWrap (n - 1) (Function (Just "map") mapImpl [Bound (VFunction f), Unbound])
 
 mkFunc :: Operator -> Int -> Reader ParseContext Function
 mkFunc (Operator (OpType t) (Valence v)) mapDepth = do
@@ -260,8 +260,14 @@ mkFuncL (Operator o@(OpType t) (Valence v)) mapDepth args = do
   let (_, impl) = builtins M.! t
   if
       | length args > v -> return . Left $ TooManyArgumentsError o v (length args)
-      | length args < v -> Right <$> mapWrap mapDepth (Function (Just t) impl (args ++ replicate (v - length args) Unbound))
-      | otherwise -> Right <$> mapWrap mapDepth (Function (Just t) impl args)
+      | otherwise -> case mapDepth of
+        0 -> return . Right $ Function (Just t) impl (args ++ replicate (v - length args) Unbound)
+        _ -> do
+          (Function t' impl' args') <- mapWrap mapDepth (Function (Just t) impl args)
+          -- Unwrap the mapWrap to just pull out the function, which we trust we can apply to
+          -- the original arguments
+          let (f : _) = args'
+          return . Right $ Function t' impl' (f : args) -- Here we don't do a valence-check on map; if we mapbanged we might have wrong valence
 
 operator :: Reader ParseContext (P (Operator, Int))
 operator = do

@@ -81,6 +81,9 @@ main = do
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "foldl1" "[1,2,3]|foldl1|+" (VInteger 6)
   assertEvaluatesTo "scanl1" "[1,2,3]|scanl1|+" (VList $ VInteger <$> [1, 3, 6])
+  assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
+  assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
+  -- TODO: Mapbang lambdas
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
