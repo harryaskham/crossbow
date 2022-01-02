@@ -264,7 +264,7 @@ builtins =
             )
         )
       ),
-      ("if", (Valence 3, mkHSImpl (\[VBool p, a, b] -> if p then a else b))),
+      ("if", (Valence 3, mkHSImpl (\[p, a, b] -> let (VBool p') = fromRight' $ castToBool p in if p' then a else b))),
       ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"++_)|(_++\".txt\")|read}")),
       ("sum", (Valence 1, CBImpl "foldl|+|0")),
       ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
@@ -341,6 +341,7 @@ builtins =
       ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
       ("fold", (Valence 3, CBImpl "foldl")),
       ("scan", (Valence 3, CBImpl "scanl")),
+      ("transpose", (Valence 1, CBImpl "{if $0|cons (map (head) $0) (transpose (map (tail) $0))|[]}")),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
