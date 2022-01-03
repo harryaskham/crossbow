@@ -87,6 +87,7 @@ library
     exposed-modules:    Crossbow.Types,
                         Crossbow.Util,
                         Crossbow.Evaluator,
+                        Crossbow.Execute,
                         Crossbow.Parser
 
 executable crossbow
@@ -97,6 +98,7 @@ executable crossbow
     other-modules:      Crossbow.Types,
                         Crossbow.Util,
                         Crossbow.Evaluator,
+                        Crossbow.Execute,
                         Crossbow.Parser
 
 Test-Suite projectname-testsuite
@@ -108,6 +110,7 @@ Test-Suite projectname-testsuite
     other-modules:      Crossbow.Types,
                         Crossbow.Util,
                         Crossbow.Evaluator,
+                        Crossbow.Execute,
                         Crossbow.Parser
     build-depends:      QuickCheck,
                         HUnit

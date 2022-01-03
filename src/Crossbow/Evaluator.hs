@@ -25,7 +25,7 @@ debugParser :: Bool
 debugParser = False
 
 debugEvaluation :: Bool
-debugEvaluation = True
+debugEvaluation = False
 
 parseProgram :: Text -> Eval (Either ParseError [[Value]])
 parseProgram t = do
@@ -240,9 +240,11 @@ evalF vf@(VFunction (Function name args)) = do
           -- If the result is another function, we had an alias chain, and we need to ensure
           -- the previous args parensIf
           -- TODO: But what if a fully applied function returns another function?
-          case result of
-            VFunction (Function name _) -> deepEval $ VFunction (Function name args)
-            v -> return . Right $ v
+          -- Yep, the below kills tests
+          -- case result of
+          --   VFunction (Function name _) -> deepEval $ VFunction (Function name args)
+          --   v -> return . Right $ v
+          return $ Right result
 evalF v = return $ Right v
 
 -- Turn e.g. $4 into 4

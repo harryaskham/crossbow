@@ -1,6 +1,7 @@
 module Main where
 
 import Crossbow.Evaluator
+import Crossbow.Execute
 import Crossbow.Parser
 import Crossbow.Types
 import Crossbow.Util
@@ -10,11 +11,19 @@ import Test.HUnit (assertEqual, assertFailure)
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
-  let programContext = ProgramContext clauses builtins
+  let programContext = ProgramContext program builtins
   pE <- evalStateT (compile source) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
-    Right v -> assertEqual (T.unpack msg) v expected
+    Right v -> assertEqual (T.unpack msg) v [expected]
+
+assertFileEvaluatesTo :: FilePath -> [Value] -> IO ()
+assertFileEvaluatesTo path expected = do
+  print path
+  pE <- runFile path
+  case pE of
+    Left e -> assertFailure $ T.unpack (T.pack path <> "\nFailed with:\n" <> pretty e)
+    Right v -> assertEqual path v expected
 
 main :: IO ()
 main = do
@@ -83,6 +92,8 @@ main = do
   --assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
   -- TODO: Fix this: assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
   -- TODO: Mapbang lambdas
+
+  assertFileEvaluatesTo "test/file_test.cb" [VNull, VNull, VInteger 3]
 
   assertEvaluatesTo
     "Day 1 (Part 1)"
