@@ -15,12 +15,23 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
-import Text.ParserCombinators.Parsec (parse)
+import System.IO.Unsafe (unsafePerformIO)
+import Text.Parsec (parserTrace)
+import Text.ParserCombinators.Parsec (parse, parseTest)
+
+debugParser :: Bool
+debugParser = False
 
 compile :: P [IO Value] -> Text -> IO (Either CrossbowError Value)
-compile programParser t = case parse programParser "" . T.unpack $ t of
-  Left e -> return . Left $ UncaughtParseError e
-  Right cs -> runClauses programParser cs
+compile programParser t = do
+  when debugParser do
+    print "Running parse test"
+    s <- parseTest (unsafePerformIO <$$> programParser) (T.unpack t)
+    print "Parse test complete"
+    print s
+  case parse programParser "" . T.unpack $ t of
+    Left e -> return . Left $ UncaughtParseError e
+    Right cs -> runClauses programParser cs
 
 compileUnsafe :: P [IO Value] -> Text -> IO Value
 compileUnsafe programParser p = withPrettyError <$> compile programParser p

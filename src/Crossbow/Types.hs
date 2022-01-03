@@ -17,6 +17,13 @@ type ProgramParser = P [IO Value]
 
 type Builtins = Map Text (Valence, OpImpl)
 
+data ProgramContext = ProgramContext
+  { _programParser :: ProgramParser,
+    _builtins :: Builtins
+  }
+
+type CrossbowEval = State ProgramContext
+
 data CrossbowError
   = TooManyArgumentsError OpType Int Int
   | UncaughtParseError ParseError

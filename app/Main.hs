@@ -12,7 +12,7 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
   where
     -- TODO: Perhaps programParser is a function that always takes the builtins
     -- Or better, we always have State
-    programParser = evalState program builtins
+    programParser = runReader program builtins
     -- TODO: Yep, run the below with StateT
     loop = do
       inputM <- getInputLine "|-> "
