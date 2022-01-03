@@ -21,7 +21,7 @@ import Text.Parsec (parserTrace)
 import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 
 debugParser :: Bool
-debugParser = True
+debugParser = False
 
 parseProgram :: Text -> Eval (Either ParseError [Value])
 parseProgram t = do
@@ -286,7 +286,8 @@ builtins =
         ( Valence 2,
           HSImpl
             ( let map [_, VList []] = return $ VList []
-                  map [VFunction f, VList (x : xs)] = do
+                  map [callable, VList (x : xs)] = do
+                    VFunction f <- fromCallable callable
                     x' <- applyF f x BindFromRight
                     vCons (withPrettyError x') <$> map [VFunction f, VList xs]
                in map
@@ -335,7 +336,8 @@ builtins =
       ( "foldl",
         ( Valence 3,
           HSImpl
-            ( \[VFunction f, acc, VList xs] -> do
+            ( \[callable, acc, VList xs] -> do
+                VFunction f <- fromCallable callable
                 foldlM
                   ( \acc x -> do
                       (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
@@ -349,7 +351,8 @@ builtins =
       ( "foldr",
         ( Valence 3,
           HSImpl
-            ( \[VFunction f, VList xs, acc] -> do
+            ( \[callable, VList xs, acc] -> do
+                VFunction f <- fromCallable callable
                 foldrM
                   ( \acc x -> do
                       (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
@@ -363,7 +366,8 @@ builtins =
       ( "scanl",
         ( Valence 3,
           HSImpl
-            ( \[VFunction f, acc, VList xs] -> do
+            ( \[callable, acc, VList xs] -> do
+                VFunction f <- fromCallable callable
                 fmap VList . sequence $
                   scanl'
                     ( \accM x -> do
@@ -379,7 +383,8 @@ builtins =
       ( "scanr",
         ( Valence 3,
           HSImpl
-            ( \[VFunction f, acc, VList xs] -> do
+            ( \[callable, acc, VList xs] -> do
+                VFunction f <- fromCallable callable
                 fmap VList . sequence $
                   scanr
                     ( \x accM -> do
