@@ -2,8 +2,6 @@
 
 - Do Next
   - [ ] Bind function with aliases - remove need for Valence in the map (move Valence to HSImpl)
-    - We have <- but is very janky
-    - Ideally bind returns nothing, but no cnocept of NUll return yet
   - [ ] rename builtins to namespace
   - [ ] runFile: in Main, calling on a multiline program parser in Parser which can parse nested Programs in {}
     - Print all values, where the last value is the return type

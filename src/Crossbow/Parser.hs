@@ -151,18 +151,6 @@ vLambda = do
           _ -> cs
   return $ VLambda csWithInitial
 
-maxArgIx :: Value -> Maybe Int
-maxArgIx i@(VIdentifier _) = Just $ identifierIx i
-maxArgIx (VFunction (Function _ args)) =
-  case mapMaybe maxArgIx args of
-    [] -> Nothing
-    ixs -> Just $ L.maximum ixs
-maxArgIx (VList as) =
-  case mapMaybe maxArgIx as of
-    [] -> Nothing
-    ixs -> Just $ L.maximum ixs
-maxArgIx _ = Nothing
-
 mapWrap :: Int -> Function -> Function
 mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])

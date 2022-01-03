@@ -77,27 +77,50 @@ runClauses (c : cs) = do
                 Left e -> return $ Left e
                 Right deepV -> go (return deepV) cs
 
+maxArgIx :: Value -> Maybe Int
+maxArgIx i@(VIdentifier _) = Just $ identifierIx i
+maxArgIx (VFunction (Function _ args)) =
+  case mapMaybe maxArgIx args of
+    [] -> Nothing
+    ixs -> Just $ L.maximum ixs
+maxArgIx (VList as) =
+  case mapMaybe maxArgIx as of
+    [] -> Nothing
+    ixs -> Just $ L.maximum ixs
+maxArgIx _ = Nothing
+
+numArgs :: Value -> Int
+numArgs (VLambda clauses) =
+  case mapMaybe maxArgIx clauses of
+    [] -> 1
+    ns -> L.maximum ns + 1
+numArgs _ = error "Can't call numArgs on a non lambda"
+
 -- Build a vFunction that will take arguments, substitute, and then run clauses
 -- Does so by creating a hashed name for this lambda and storing it with our program context
 -- TODO: Still need to add this to the State, so we do need Eval to become StateT
 compileLambda :: Value -> Eval (Either CrossbowError Value)
-compileLambda (VLambda clauses) =
+compileLambda lambda@(VLambda clauses) =
   do
     g <- newStdGen
+    let nArgs = numArgs lambda
     let lambdaName = T.pack ("lambda_" <> take 16 (randomRs ('a', 'z') g))
         impl =
           HSImpl
             ( \args -> do
-                let cs' = substituteArgs args <$> clauses
-                vE <- runClauses cs'
-                case vE of
-                  Left e -> return $ Left e
-                  Right vIO -> do
-                    v <- liftIO vIO
-                    deepVE <- deepEval v
-                    case deepVE of
+                if length args /= nArgs
+                  then return . Left $ ValenceError (length args)
+                  else do
+                    let cs' = substituteArgs args <$> clauses
+                    vE <- runClauses cs'
+                    case vE of
                       Left e -> return $ Left e
-                      Right deepV -> return $ Right deepV
+                      Right vIO -> do
+                        v <- liftIO vIO
+                        deepVE <- deepEval v
+                        case deepVE of
+                          Left e -> return $ Left e
+                          Right deepV -> return $ Right deepV
             )
     -- Register the lambda with the namespace
     (ProgramContext pp builtins) <- get
