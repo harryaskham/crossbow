@@ -20,6 +20,7 @@
 - Language features
   - [ ] variadic, inverse function of monadic
     - Give Valence a Variadic member where we just strictly apply until we have a value
+  - [ ] lean into the lispiness; its also a lisp
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
     - can circumvent this by wrapping in {} for now e.g. {[+1,+2]}
   - [ ] Let bindings; getting more and more useful
