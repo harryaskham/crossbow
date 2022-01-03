@@ -1,7 +1,8 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] 'apply' should be an Either, which will bubble up far
+  - bind fn with -> and flipped aliases, reader to state, adds to builtins, all fns impls run inside State, program can be multiline and builds ip contrxt, runs values, runFile fn, move aoc sols to file, tests load file instead, repl/file mode, bind is just a fn and can run inline, ident parser without $
+  - [X] 'apply' should be an Either, which will bubble up far
     - Introduce more withPrettyError at first
     - We'll take these out in a second step
   - [-] Remove all partial functions to stop interpreter crashes:
@@ -20,6 +21,7 @@
 - Language features
   - [ ] variadic, inverse function of monadic
     - Give Valence a Variadic member where we just strictly apply until we have a value
+  - [ ] emacs mode
   - [ ] lean into the lispiness; its also a lisp
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
     - can circumvent this by wrapping in {} for now e.g. {[+1,+2]}
