@@ -17,7 +17,7 @@ main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoA
       case inputM of
         Nothing -> return ()
         Just input -> do
-          pE <- liftIO (runReaderT (compile (T.pack input)) programContext)
+          pE <- liftIO (evalStateT (compile (T.pack input)) programContext)
           case pE of
             Right resultIO -> do
               result <- liftIO resultIO

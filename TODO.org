@@ -2,6 +2,7 @@
 
 - Do Next
   - [ ] Deep Hole
+    - rename builtins to namespace
     - reenable mapwrap
     - reenable lambdas
     - reenable unbound holes

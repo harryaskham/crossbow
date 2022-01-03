@@ -16,6 +16,7 @@ import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
 import System.IO.Unsafe (unsafePerformIO)
+import System.Random (newStdGen, randomRs)
 import Text.Parsec (parserTrace)
 import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 
@@ -24,12 +25,12 @@ debugParser = True
 
 parseProgram :: Text -> Eval (Either ParseError [Value])
 parseProgram t = do
-  programParser <- asks _programParser
+  programParser <- gets _programParser
   return $ parse programParser "" . T.unpack $ t
 
 debugParseProgram :: Text -> Eval ()
 debugParseProgram t = do
-  programParser <- asks _programParser
+  programParser <- gets _programParser
   liftIO do
     print "Running parse test"
     parseTest programParser (T.unpack t)
@@ -75,9 +76,10 @@ runClauses (c : cs) = do
 -- Does so by creating a hashed name for this lambda and storing it with our program context
 -- TODO: Still need to add this to the State, so we do need Eval to become StateT
 compileLambda :: Value -> Eval (Either CrossbowError Value)
-compileLambda (VLambda (Valence v) clauses) =
+compileLambda (VLambda valence clauses) =
   do
-    let lambdaName = "onelambda"
+    g <- newStdGen
+    let lambdaName = T.pack ("lambda_" <> take 16 (randomRs ('a', 'z') g))
         impl =
           ( HSImpl
               ( \args -> do
@@ -93,6 +95,9 @@ compileLambda (VLambda (Valence v) clauses) =
                         Right deepV -> return deepV
               )
           )
+    -- Register the lambda with the namespace
+    (ProgramContext pp builtins) <- get
+    put (ProgramContext pp (M.insert lambdaName (valence, impl) builtins))
     return . Right $ VFunction (Function lambdaName [])
 compileLambda v = return . Left $ NonLambdaCompilationError v
 
@@ -172,7 +177,7 @@ runHSImpl hsF args = do
 
 evalF :: Value -> Eval (Either CrossbowError Value)
 evalF vf@(VFunction (Function name args)) = do
-  builtins <- asks _builtins
+  builtins <- gets _builtins
   case M.lookup name builtins of
     Nothing -> return . Left . EvalError $ "No value named: " <> name
     Just (Valence v, impl) ->

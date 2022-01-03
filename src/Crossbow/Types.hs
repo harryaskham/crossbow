@@ -15,6 +15,8 @@ type P = GenParser Char ()
 
 type ProgramParser = P [Value]
 
+type Eval = StateT ProgramContext IO
+
 type Builtins = Map Text (Valence, OpImpl)
 
 data ProgramContext = ProgramContext
@@ -267,8 +269,6 @@ instance Eq Function where
   (==) = error "Function equality"
 
 newtype Valence = Valence Int deriving (Show, Eq)
-
-type Eval = ReaderT ProgramContext IO
 
 data OpImpl
   = HSImpl ([Value] -> Eval Value)
