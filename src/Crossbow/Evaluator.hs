@@ -130,6 +130,8 @@ compileLambda v = return . Left $ NonLambdaCompilationError v
 
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> Eval (Either CrossbowError Value)
+apply v VNull = return . Right $ v
+apply VNull v = return . Right $ v
 -- Lambdas get JIT compiled here
 apply l@(VLambda _) v = do
   lE <- compileLambda l
