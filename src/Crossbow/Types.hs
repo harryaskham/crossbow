@@ -17,7 +17,7 @@ type ProgramParser = P [Value]
 
 type Eval = StateT ProgramContext IO
 
-type Builtins = Map Text (Valence, OpImpl)
+type Builtins = Map Text OpImpl
 
 data ProgramContext = ProgramContext
   { _programParser :: ProgramParser,
@@ -38,6 +38,9 @@ data CrossbowError
   | EmptyProgramError
   | NonLambdaCompilationError Value
   | ApplyError [CrossbowError]
+  | ValenceError Int
+  | WrapCBImplError
+  | WrapConstImplError
 
 -- TODO: Remove this when making entire REPL error-safe
 withPrettyError :: Either CrossbowError a -> a
@@ -56,6 +59,9 @@ instance Pretty CrossbowError where
   pretty (InternalError e) = "Internal error: " <> e
   pretty (NonLambdaCompilationError v) = "Attempting to compile non-lambda: " <> show v
   pretty EmptyProgramError = "No program supplied"
+  pretty (ValenceError i) = "Wrong number of args supplied: " <> show i
+  pretty WrapCBImplError = "Can't wrap a Crossbow OpImpl"
+  pretty WrapConstImplError = "Can't wrap a Const OpImpl"
 
 data Value
   = VInteger Integer
@@ -64,7 +70,7 @@ data Value
   | VChar Char
   | VList [Value]
   | VFunction Function
-  | VLambda Valence [Value]
+  | VLambda [Value]
   | VIdentifier Text
   deriving (Show, Eq)
 
@@ -268,10 +274,8 @@ instance Show Function where
 instance Eq Function where
   (==) = error "Function equality"
 
-newtype Valence = Valence Int deriving (Show, Eq)
-
 data OpImpl
-  = HSImpl ([Value] -> Eval Value)
+  = HSImpl ([Value] -> Eval (Either CrossbowError Value))
   | CBImpl Text
   | ConstImpl Value
 
@@ -297,7 +301,7 @@ instance Pretty Value where
     | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
     | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
-  pretty (VLambda _ cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
+  pretty (VLambda cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
 
 instance Pretty Function where

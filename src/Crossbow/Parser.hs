@@ -149,7 +149,7 @@ vLambda = do
         case numArgs of
           0 -> VIdentifier "$0" : cs
           _ -> cs
-  return $ VLambda (Valence (max numArgs 1)) csWithInitial
+  return $ VLambda csWithInitial
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
@@ -180,7 +180,6 @@ function = do
     mapBangs <- many (char '!')
     return (mapWrap (length mapBangs) (Function fName []))
 
--- TODO: Shit, binding needs a valence
 binding :: P Value
 binding = do
   n <- name
