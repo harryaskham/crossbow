@@ -24,8 +24,6 @@ main = do
         Just input -> do
           pE <- lift $ compile (T.pack input)
           case pE of
-            Right resultIO -> do
-              result <- liftIO resultIO
-              liftIO $ putTextLn (pretty result)
+            Right result -> liftIO $ putTextLn (pretty result)
             Left e -> liftIO $ putTextLn (pretty e)
       loop

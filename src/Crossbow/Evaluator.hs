@@ -36,7 +36,7 @@ debugParseProgram t = do
     parseTest programParser (T.unpack t)
     print "Parse test complete"
 
-compile :: Text -> Eval (Either CrossbowError (IO Value))
+compile :: Text -> Eval (Either CrossbowError Value)
 compile t = do
   when debugParser (debugParseProgram t)
   pE <- parseProgram t
@@ -44,38 +44,31 @@ compile t = do
     Left e -> return $ Left (UncaughtParseError e)
     Right cs -> runClauses cs
 
-compileUnsafe :: Text -> Eval (IO Value)
+compileUnsafe :: Text -> Eval Value
 compileUnsafe t = do
   pE <- compile t
   return $ withPrettyError pE
 
-runClauses :: [Value] -> Eval (Either CrossbowError (IO Value))
+runClauses :: [Value] -> Eval (Either CrossbowError Value)
 runClauses [] = return (Left EmptyProgramError)
 -- We might first start with a fully bound clause, so ensure that one is deeply eval'd before moving on
 runClauses (c : cs) = do
   cDeepE <- deepEval c
   case cDeepE of
     Left e -> return $ Left e
-    Right cDeep -> go (return cDeep) cs
+    Right cDeep -> go cDeep cs
   where
-    go :: IO Value -> [Value] -> Eval (Either CrossbowError (IO Value))
-    go vIO [] = return $ Right vIO
-    go vIO (c : cs) = do
-      v <- liftIO vIO
-      -- TODO: Not clear that this E.try is actually going to catch anything
-      apE' <- apply v c
-      apE <- liftIO (E.try (pure apE') :: IO (Either SomeException (Either CrossbowError Value)))
+    go :: Value -> [Value] -> Eval (Either CrossbowError Value)
+    go v [] = return $ Right v
+    go v (c : cs) = do
+      apE <- apply v c
       case apE of
-        Left e -> return $ Left $ InternalError (show e)
-        Right vE ->
-          case vE of
+        Left e -> return $ Left e
+        Right v' -> do
+          deepVE <- deepEval v'
+          case deepVE of
             Left e -> return $ Left e
-            Right v' -> do
-              -- TODO: Can we do away with this deepEval? Doesn't apply handle it?
-              deepVE <- deepEval v'
-              case deepVE of
-                Left e -> return $ Left e
-                Right deepV -> go (return deepV) cs
+            Right deepV -> go deepV cs
 
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
@@ -115,8 +108,7 @@ compileLambda lambda@(VLambda clauses) =
                     vE <- runClauses cs'
                     case vE of
                       Left e -> return $ Left e
-                      Right vIO -> do
-                        v <- liftIO vIO
+                      Right v -> do
                         deepVE <- deepEval v
                         case deepVE of
                           Left e -> return $ Left e
@@ -194,8 +186,7 @@ runCBImpl cbF args = do
   pE <- compile cbF
   case pE of
     Left e -> return $ Left e
-    Right fIO -> do
-      f <- liftIO fIO
+    Right f -> do
       result <- foldM (\acc x -> withPrettyError <$> apply acc x) f args
       deepEval result
 

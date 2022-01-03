@@ -10,13 +10,11 @@ import Test.HUnit (assertEqual, assertFailure)
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
-  let programContext = ProgramContext program builtins
+  let programContext = ProgramContext clauses builtins
   pE <- evalStateT (compile source) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
-    Right vIO -> do
-      v <- vIO
-      assertEqual (T.unpack msg) v expected
+    Right v -> assertEqual (T.unpack msg) v expected
 
 main :: IO ()
 main = do
