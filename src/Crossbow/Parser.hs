@@ -48,10 +48,10 @@ clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
 clauses :: P [Value]
-clauses = value `sepBy` clauseDivider
+clauses = value `sepBy1` clauseDivider
 
 program :: P [[Value]]
-program = clauses `sepBy` spaces
+program = clauses `sepBy1` spaces
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')

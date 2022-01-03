@@ -13,7 +13,7 @@ import Text.Show (showsPrec)
 
 type P = GenParser Char ()
 
-type ProgramParser = P [Value]
+type ProgramParser = P [[Value]]
 
 type Eval = StateT ProgramContext IO
 
@@ -38,7 +38,7 @@ data CrossbowError
   | EmptyProgramError
   | NonLambdaCompilationError Value
   | ApplyError [CrossbowError]
-  | ValenceError Int
+  | ValenceError Int Int
   | WrapCBImplError
   | WrapConstImplError
 
@@ -59,7 +59,7 @@ instance Pretty CrossbowError where
   pretty (InternalError e) = "Internal error: " <> e
   pretty (NonLambdaCompilationError v) = "Attempting to compile non-lambda: " <> show v
   pretty EmptyProgramError = ""
-  pretty (ValenceError i) = "Wrong number of args supplied: " <> show i
+  pretty (ValenceError i j) = "Wrong number of args supplied (got, wanted): " <> show (i, j)
   pretty WrapCBImplError = "Can't wrap a Crossbow OpImpl"
   pretty WrapConstImplError = "Can't wrap a Const OpImpl"
 

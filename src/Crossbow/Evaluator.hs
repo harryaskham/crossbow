@@ -15,6 +15,7 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
+import Language.Haskell.TH.Ppr (parensIf)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (newStdGen, randomRs)
 import Text.Parsec (parserTrace)
@@ -23,7 +24,10 @@ import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 debugParser :: Bool
 debugParser = False
 
-parseProgram :: Text -> Eval (Either ParseError [Value])
+debugEvaluation :: Bool
+debugEvaluation = True
+
+parseProgram :: Text -> Eval (Either ParseError [[Value]])
 parseProgram t = do
   programParser <- gets _programParser
   return $ parse programParser "" . T.unpack $ t
@@ -36,18 +40,29 @@ debugParseProgram t = do
     parseTest programParser (T.unpack t)
     print "Parse test complete"
 
-compile :: Text -> Eval (Either CrossbowError Value)
+compile :: Text -> Eval (Either CrossbowError [Value])
 compile t = do
   when debugParser (debugParseProgram t)
   pE <- parseProgram t
   case pE of
     Left e -> return $ Left (UncaughtParseError e)
-    Right cs -> runClauses cs
+    Right css -> runProgram css
 
-compileUnsafe :: Text -> Eval Value
+compileUnsafe :: Text -> Eval [Value]
 compileUnsafe t = do
   pE <- compile t
   return $ withPrettyError pE
+
+runProgram :: [[Value]] -> Eval (Either CrossbowError [Value])
+runProgram css = go css []
+  where
+    go [] vs = return $ Right (reverse vs)
+    go (cs : css) vs = do
+      vE <- runClauses cs
+      case vE of
+        Left e -> do
+          return $ Left e
+        Right v -> go css (v : vs)
 
 runClauses :: [Value] -> Eval (Either CrossbowError Value)
 runClauses [] = return (Left EmptyProgramError)
@@ -61,6 +76,9 @@ runClauses (c : cs) = do
     go :: Value -> [Value] -> Eval (Either CrossbowError Value)
     go v [] = return $ Right v
     go v (c : cs) = do
+      when debugEvaluation do
+        print $ "State: " <> pretty v
+        print $ "Applying to: " <> pretty c
       apE <- apply v c
       case apE of
         Left e -> return $ Left e
@@ -101,20 +119,15 @@ compileLambda lambda@(VLambda clauses) =
         impl =
           HSImpl
             ( \args -> do
+                when debugEvaluation $ liftIO (print $ "Inside lambda " <> lambdaName <> " with args: " <> (T.intercalate "," (pretty <$> args)))
                 if length args /= nArgs
-                  then return . Left $ ValenceError (length args)
+                  then return $ Left $ ValenceError (length args) nArgs
                   else do
                     let cs' = substituteArgs args <$> clauses
-                    vE <- runClauses cs'
-                    case vE of
-                      Left e -> return $ Left e
-                      Right v -> do
-                        deepVE <- deepEval v
-                        case deepVE of
-                          Left e -> return $ Left e
-                          Right deepV -> return $ Right deepV
+                    runClauses cs'
             )
     -- Register the lambda with the namespace
+    when debugEvaluation (print $ "Compiled lambda: " <> lambdaName)
     (ProgramContext pp builtins) <- get
     put (ProgramContext pp (M.insert lambdaName impl builtins))
     return . Right $ VFunction (Function lambdaName [])
@@ -172,6 +185,8 @@ bindNext (Function name args) v bindDir =
 
 applyF :: Function -> Value -> BindDir -> Eval (Either CrossbowError Value)
 applyF f v bindDir = do
+  when debugEvaluation do
+    print $ "Applying " <> pretty f
   strictVE <- deepEval v
   case strictVE of
     Left e -> return $ Left e
@@ -183,22 +198,30 @@ isIdentifier _ = False
 
 runCBImpl :: Text -> [Value] -> Eval (Either CrossbowError Value)
 runCBImpl cbF args = do
+  when debugEvaluation (print $ "Running CBImpl with args: " <> cbF <> ", " <> (T.intercalate "," $ pretty <$> args))
   pE <- compile cbF
   case pE of
     Left e -> return $ Left e
-    Right f -> do
+    Right [f] -> do
       result <- foldM (\acc x -> withPrettyError <$> apply acc x) f args
       deepEval result
+    Right _ -> error "Can't handle CBImpl with more than one return value yet"
 
 runHSImpl :: ([Value] -> Eval (Either CrossbowError Value)) -> [Value] -> Eval (Either CrossbowError Value)
 runHSImpl hsF args = do
+  when debugEvaluation (print $ "Running HSImpl with args: " <> (T.intercalate "," $ pretty <$> args))
   resultE <- hsF args
   case resultE of
     Left e -> return $ Left e
-    Right result -> deepEval result
+    Right result -> do
+      when debugEvaluation (print $ "HSImpl succeeded with result: " <> pretty result)
+      deepEval result
 
+-- TODO: Alias chains cause this to break
 evalF :: Value -> Eval (Either CrossbowError Value)
 evalF vf@(VFunction (Function name args)) = do
+  when debugEvaluation do
+    print $ "Evaluating VFunction: " <> pretty vf
   builtins <- gets _builtins
   case M.lookup name builtins of
     Nothing -> return . Left . EvalError $ "No value named: " <> name
@@ -209,8 +232,17 @@ evalF vf@(VFunction (Function name args)) = do
           CBImpl cbF -> runCBImpl cbF args
           ConstImpl constV -> return $ Right constV
       case resultE of
-        Left _ -> return $ Right vf -- If we could not apply, don't
-        Right result -> return $ Right result -- We managed to bind without error
+        Left e -> do
+          when debugEvaluation (print $ "Could not apply: " <> pretty e)
+          return $ Right vf -- If we could not apply, don't
+        Right result -> do
+          when debugEvaluation (print $ "Bound successfully with result: " <> pretty result)
+          -- If the result is another function, we had an alias chain, and we need to ensure
+          -- the previous args parensIf
+          -- TODO: But what if a fully applied function returns another function?
+          case result of
+            VFunction (Function name _) -> deepEval $ VFunction (Function name args)
+            v -> return . Right $ v
 evalF v = return $ Right v
 
 -- Turn e.g. $4 into 4
@@ -230,8 +262,9 @@ substituteArgs _ v = v
 -- Deeply evaluate the given value.
 -- Ensure if this is a function that all arguments are strictly evaluated.
 deepEval :: Value -> Eval (Either CrossbowError Value)
-deepEval (VFunction (Function name args)) =
+deepEval (VFunction f@(Function name args)) =
   do
+    when debugEvaluation (print $ "Deeply evaluating function: " <> pretty f)
     (errors, argsStrict) <- partitionEithers <$> traverse deepEval args
     if not (null errors)
       then return . Left $ L.head errors
@@ -254,7 +287,7 @@ wrapImpl n (HSImpl f) =
     ( \args ->
         if n == length args
           then f args
-          else return . Left $ ValenceError (length args)
+          else return . Left $ ValenceError (length args) n
     )
 
 builtins :: Map Text OpImpl
