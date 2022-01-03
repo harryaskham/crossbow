@@ -60,7 +60,8 @@ value :: P Value
 value =
   ignoreSpaces $
     firstOf
-      [ vRange,
+      [ vBool,
+        vRange,
         vNumber,
         inParens value,
         vLambda,
@@ -68,8 +69,7 @@ value =
         vFunction,
         vList,
         vChar,
-        vString,
-        vBool
+        vString
       ]
   where
     vIdentifier :: P Value
@@ -174,5 +174,5 @@ function = do
   ignoreSpaces $ do
     -- We parse in favour of longer names first to avoid max/maximum clashes
     fName <- many1 (noneOf disallowedChars)
-    -- mapBangs <- many (char '!')
-    return (Function (T.pack fName) [])
+    mapBangs <- many (char '!')
+    return (mapWrap (length mapBangs) (Function (T.pack fName) []))
