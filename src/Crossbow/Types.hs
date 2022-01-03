@@ -72,6 +72,7 @@ data Value
   | VFunction Function
   | VLambda [Value]
   | VIdentifier Text
+  | VNull
   deriving (Show, Eq)
 
 -- TODO: Required for Integral - what does this break?
@@ -100,6 +101,7 @@ instance Semigroup Value where
   (VList a) <> b = VList (a <&> (<> b))
   f@(VFunction _) <> _ = error $ "Cannot + unevaluated function: " <> show f
   (VIdentifier i) <> _ = error $ "Cannot + unbound identifier: " <> i
+  VNull <> _ = error $ "Cannot + null: "
 
 instance Num Value where
   (+) = (<>)
@@ -124,6 +126,7 @@ instance Num Value where
   (VChar _) * _ = error "Cannot multiply Char"
   (VFunction f) * _ = error $ "Cannot multiply unevaluated function: " <> show f
   (VIdentifier i) * _ = error $ "Cannot multiply an unbound identifier: " <> i
+  VNull * _ = error $ "Cannot multiply null: "
   abs (VInteger a) = VInteger (abs a)
   abs (VDouble a) = VDouble (abs a)
   abs (VList as) = VList (abs <$> as)
@@ -131,6 +134,7 @@ instance Num Value where
   abs (VBool _) = error "Cannot abs a Bool"
   abs (VFunction f) = error $ "Cannot abs an unevaluated function: " <> show f
   abs (VIdentifier i) = error $ "Cannot abs an unbound identifier: " <> i
+  abs VNull = error $ "Cannot abs null"
   signum (VInteger a)
     | a == 0 = 0
     | a < 0 = -1
@@ -147,6 +151,7 @@ instance Num Value where
   negate (VChar _) = error "Cannot negate a Char"
   negate f@(VFunction _) = error $ "Cannot negate an unevaluated function: " <> show f
   negate (VIdentifier i) = error $ "Cannot negate an unbound identifier: " <> i
+  negate VNull = error "Cannot negate null"
 
 instance Integral Value where
   quotRem (VInteger a) (VInteger b) = both VInteger (a `quotRem` b)
@@ -177,6 +182,7 @@ asText (VBool a) = show a
 asText (VChar a) = T.pack [a]
 asText (VList as) = mconcat (asText <$> as)
 asText (VFunction _) = error "Can't coerce function to text"
+asText VNull = "null"
 
 isNumeric :: Value -> Bool
 isNumeric (VInteger _) = True
@@ -188,6 +194,7 @@ truthy (VBool b) = b
 truthy (VInteger 0) = False
 truthy (VList []) = False
 truthy (VDouble 0.0) = False
+truthy VNull = False
 truthy _ = True
 
 castToInt :: Value -> Either CrossbowError Value
@@ -206,6 +213,7 @@ castToInt v@(VList vs)
       Right vs -> Right $ VList vs
 castToInt f@(VFunction _) = Left $ CastToIntError f
 castToInt (VBool b) = Right $ VInteger (fromIntegral $ fromEnum b)
+castToInt VNull = Right (VInteger 0)
 
 castToDouble :: Value -> Either CrossbowError Value
 castToDouble v@(VDouble _) = Right v
@@ -218,6 +226,7 @@ castToDouble (VList vs) =
 castToDouble (VBool b) = Right $ VInteger $ (fromIntegral $ fromEnum b)
 castToDouble f@(VFunction _) = Left $ CastToDoubleError f
 castToDouble i@(VIdentifier _) = Left $ CastToDoubleError i
+castToDouble VNull = Right (VDouble 0.0)
 
 castToChar :: Value -> Either CrossbowError Value
 castToChar v@(VChar _) = Right v
@@ -230,6 +239,7 @@ castToChar (VList vs) =
 castToChar (VBool b) = Right $ VChar (intToDigit $ fromEnum b)
 castToChar f@(VFunction _) = Left $ CastToCharError f
 castToChar i@(VIdentifier _) = Left $ CastToCharError i
+castToChar VNull = Left $ CastToCharError VNull
 
 castToBool :: Value -> Either CrossbowError Value
 castToBool v@(VBool _) = Right v
@@ -239,6 +249,7 @@ castToBool a@(VList _) = Right $ VBool (truthy a)
 castToBool v@(VChar _) = Left $ CastToCharError v
 castToBool f@(VFunction _) = Left $ CastToCharError f
 castToBool i@(VIdentifier _) = Left $ CastToCharError i
+castToBool VNull = Right $ VBool True
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
@@ -303,6 +314,7 @@ instance Pretty Value where
   pretty (VFunction f) = pretty f
   pretty (VLambda cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
+  pretty VNull = "null"
 
 instance Pretty Function where
   pretty (Function name args) = "(" <> name <> " [" <> T.intercalate "," (pretty <$> args) <> "])"
