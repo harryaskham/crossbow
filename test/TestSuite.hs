@@ -28,6 +28,7 @@ main = do
   assertEvaluatesTo "negative double" "(-1.4)" (VDouble (-1.4))
   assertEvaluatesTo "addition" "1|+ 2" (VInteger 3)
   assertEvaluatesTo "multiplication" "2|* 4)" (VInteger 8)
+  assertEvaluatesTo "binary addition" "(1 + 2)" (VInteger 3)
   assertEvaluatesTo "double addition" "1.0|+ 2.0" (VDouble 3.0)
   assertEvaluatesTo "int/double addition" "1|+ 2.0" (VDouble 3.0)
   assertEvaluatesTo "addition with spaces" "    1 |   +     2  " (VInteger 3)
@@ -62,13 +63,11 @@ main = do
   assertEvaluatesTo "takes" "1:10 | take 3 _" (VList $ VInteger <$> [1, 2, 3])
   assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
   assertEvaluatesTo "heads" "3:10 | head" (VInteger 3)
-  assertEvaluatesTo "filter" "filter | (> 10) | 8:12" (VList $ VInteger <$> [8, 9])
-  assertEvaluatesTo "filter without pipes" "filter (_<10) 8:12" (VList $ VInteger <$> [8, 9])
-  assertEvaluatesTo "filter forward" "8:12 | filter (_<10) _" (VList $ VInteger <$> [8, 9])
-  assertEvaluatesTo "binary functions" "(1+2)" (VInteger 3)
+  assertEvaluatesTo "filter" "filter (> 10) 8:12" (VList $ VInteger <$> [8, 9])
+  assertEvaluatesTo "filter forward" "8:12 | filter (> 10)" (VList $ VInteger <$> [8, 9])
   assertEvaluatesTo
     "pairwise sums"
-    "1:4 | fork 2 _ | [id, drop 1 _] | monadic zip | map sum"
+    "1:4 | fork 2 | [id, drop 1] | monadic zip | map sum"
     (VList $ VInteger <$> [3, 5, 7])
   assertEvaluatesTo "list length" "length [1,2,3,4]" (VInteger 4)
   assertEvaluatesTo "empty list length" "length []" (VInteger 0)

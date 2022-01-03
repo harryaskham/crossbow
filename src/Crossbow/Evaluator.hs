@@ -135,7 +135,7 @@ apply (VList bs) (VList as@((VFunction _) : _)) =
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromLeft
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromRight
     case partitionEithers (getZipList rs) of
       ([], rs) -> return $ Right $ VList rs
       (es, _) -> return $ Left $ ApplyError es
@@ -268,7 +268,7 @@ builtins =
           HSImpl
             ( \[VInteger n, VFunction f, VList as] -> do
                 let vas = V.fromList as
-                a' <- withPrettyError <$> applyF f (vas V.! fromInteger n) BindFromLeft
+                a' <- withPrettyError <$> applyF f (vas V.! fromInteger n) BindFromRight
                 let vas' = vas V.// [(fromInteger n, a')]
                 return (VList $ V.toList vas')
             )
@@ -287,7 +287,7 @@ builtins =
           HSImpl
             ( let map [_, VList []] = return $ VList []
                   map [VFunction f, VList (x : xs)] = do
-                    x' <- applyF f x BindFromLeft
+                    x' <- applyF f x BindFromRight
                     vCons (withPrettyError x') <$> map [VFunction f, VList xs]
                in map
             )
@@ -300,7 +300,7 @@ builtins =
             ( let filter [_, VList []] = return $ VList []
                   filter [callable, VList (x : xs)] = do
                     (VFunction f) <- fromCallable callable
-                    x' <- withPrettyError <$> applyF f x BindFromLeft
+                    x' <- withPrettyError <$> applyF f x BindFromRight
                     deepX' <- withPrettyError <$> deepEval x'
                     if truthy deepX'
                       then vCons x <$> filter [VFunction f, VList xs]
@@ -338,8 +338,8 @@ builtins =
             ( \[VFunction f, acc, VList xs] -> do
                 foldlM
                   ( \acc x -> do
-                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
-                      withPrettyError <$> applyF f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
+                      withPrettyError <$> applyF f' x BindFromRight
                   )
                   acc
                   xs
@@ -352,8 +352,8 @@ builtins =
             ( \[VFunction f, VList xs, acc] -> do
                 foldrM
                   ( \acc x -> do
-                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
-                      withPrettyError <$> applyF f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
+                      withPrettyError <$> applyF f' x BindFromRight
                   )
                   acc
                   xs
@@ -368,8 +368,8 @@ builtins =
                   scanl'
                     ( \accM x -> do
                         acc <- accM
-                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
-                        withPrettyError <$> applyF f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
+                        withPrettyError <$> applyF f' x BindFromRight
                     )
                     (pure acc)
                     xs
@@ -384,8 +384,8 @@ builtins =
                   scanr
                     ( \x accM -> do
                         acc <- accM
-                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
-                        withPrettyError <$> applyF f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromRight
+                        withPrettyError <$> applyF f' x BindFromRight
                     )
                     (pure acc)
                     xs
@@ -414,7 +414,7 @@ builtins =
         ( Valence 2,
           HSImpl
             ( \[VFunction f, a] -> do
-                pE <- applyF f a BindFromLeft
+                pE <- applyF f a BindFromRight
                 return $ withPrettyError pE
             )
         )
@@ -428,7 +428,7 @@ builtins =
                   ( \v a -> do
                       case v of
                         VFunction f ->
-                          withPrettyError <$> applyF f a BindFromLeft
+                          withPrettyError <$> applyF f a BindFromRight
                         _ -> return v
                   )
                   (VFunction f)
