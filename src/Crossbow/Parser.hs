@@ -47,11 +47,11 @@ ignoreSpaces p = spaces *> p <* spaces
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
-clauses :: ProgramParser
+clauses :: P [Value]
 clauses = value `sepBy` clauseDivider
 
-program :: ProgramParser
-program = clauses
+program :: P [[Value]]
+program = clauses `sepBy` spaces
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')

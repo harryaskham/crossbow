@@ -8,19 +8,24 @@ import Data.Text qualified as T
 import System.Console.Haskeline
 
 main :: IO ()
-main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True}) loop
+main = do
+  _ <-
+    flip evalStateT programContext
+      . runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True})
+      $ loop
+  print "Exiting"
   where
-    programContext = ProgramContext program builtins
-    -- TODO: Yep, run the below with StateT
+    programContext = ProgramContext clauses builtins
+    loop :: (InputT (StateT ProgramContext IO) ())
     loop = do
       inputM <- getInputLine "|-> "
-      case inputM of
+      _ <- case inputM of
         Nothing -> return ()
         Just input -> do
-          pE <- liftIO (evalStateT (compile (T.pack input)) programContext)
+          pE <- lift $ compile (T.pack input)
           case pE of
             Right resultIO -> do
               result <- liftIO resultIO
-              putTextLn (pretty result)
+              liftIO $ putTextLn (pretty result)
             Left e -> liftIO $ putTextLn (pretty e)
-          loop
+      loop
