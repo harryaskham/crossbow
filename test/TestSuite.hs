@@ -10,7 +10,7 @@ import Test.HUnit (assertEqual, assertFailure)
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
-  let programParser = evalState program builtins
+  let programParser = runReader program builtins
   pE <- compile programParser source
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
