@@ -218,6 +218,12 @@ deepEval (VList as) = do
   return . fmap VList $ sequence as
 deepEval v = return $ Right v
 
+-- Coerce lambas into functions for the builtins
+-- TODO: Messy, try remove
+fromCallable :: Value -> Eval Value
+fromCallable l@(VLambda _ _) = withPrettyError <$> compileLambda l
+fromCallable v = return v
+
 builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
@@ -287,14 +293,16 @@ builtins =
             )
         )
       ),
-      ("count", (Valence 2, CBImpl "{$1|filter $0|length}")),
+      ("count", (Valence 2, CBImpl "{filter $0 $1 | length}")),
       ( "filter",
         ( Valence 2,
           HSImpl
             ( let filter [_, VList []] = return $ VList []
-                  filter [VFunction f, VList (x : xs)] = do
+                  filter [callable, VList (x : xs)] = do
+                    (VFunction f) <- fromCallable callable
                     x' <- withPrettyError <$> applyF f x BindFromLeft
-                    if truthy x'
+                    deepX' <- withPrettyError <$> deepEval x'
+                    if truthy deepX'
                       then vCons x <$> filter [VFunction f, VList xs]
                       else filter [VFunction f, VList xs]
                in filter
@@ -323,7 +331,7 @@ builtins =
       ("minimumOn", (Valence 2, CBImpl "{foldl1 (minOn $0) $1}")),
       ("mode", (Valence 1, CBImpl "{counts|maximumOn snd|fst}")),
       ("antimode", (Valence 1, CBImpl "{counts|minimumOn snd|fst}")),
-      ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),
+      ("length", (Valence 1, CBImpl "{map (const 1) | sum}")),
       ( "foldl",
         ( Valence 3,
           HSImpl
@@ -393,10 +401,11 @@ builtins =
       ( "flip",
         ( Valence 3,
           HSImpl
-            ( \[VFunction f, a, b] ->
+            ( \[callable, a, b] ->
                 do
-                  (VFunction f') <- withPrettyError <$> applyF f b BindFromLeft
-                  withPrettyError <$> applyF f' a BindFromLeft
+                  VFunction f <- fromCallable callable
+                  VFunction f' <- withPrettyError <$> applyF f b BindFromRight
+                  withPrettyError <$> applyF f' a BindFromRight
             )
         )
       ),

@@ -1,21 +1,17 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Deep Hole
-    - rename builtins to namespace
-    - reenable mapwrap
-    - reenable lambdas
-    - reenable unbound holes
-    - mapbangs probably do need to be lifted earlier
-    - reintroduce try around apply
-    - runclauses full application not working
-  - [ ] Reader -> State, allowing builtins to change with execution
-    - No, only evaluation should be able to change state; parsing is just parsing
-    - Do we need to lazily look up implementations, then, based on name?
-    - Build functions only with name, get the impl from the program context
-    - Lambdas? These will also have access only to the program context so this could be okay
+  - [-] Deep Hole
+    - [ ] filter appears broken
+    - [ ] reenable mapwrap
+    - [X] reenable lambdas
+    - [ ] mapbangs probably do need to be lifted earlier
+    - [ ] reintroduce try around apply
+    - [X] runclauses full application not working
+  - [X] Reader -> State, allowing builtins to change with execution
   - [ ] Bind function with aliases (how to parse identities?)
-  - [ ] HSImpl -> wrap with State
+  - [X] HSImpl -> wrap with State
+  - [ ] rename builtins to namespace
   - [ ] runFile: in Main, calling on a multiline program parser in Parser which can parse nested Programs in {}
     - Print all values, where the last value is the return type
   - [ ] Lib is dynamically loaded with a default value
