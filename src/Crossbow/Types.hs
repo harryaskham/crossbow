@@ -58,7 +58,7 @@ instance Pretty CrossbowError where
   pretty (CastToBoolError v) = "Cannot cast to Bool: " <> show v
   pretty (InternalError e) = "Internal error: " <> e
   pretty (NonLambdaCompilationError v) = "Attempting to compile non-lambda: " <> show v
-  pretty EmptyProgramError = "No program supplied"
+  pretty EmptyProgramError = ""
   pretty (ValenceError i) = "Wrong number of args supplied: " <> show i
   pretty WrapCBImplError = "Can't wrap a Crossbow OpImpl"
   pretty WrapConstImplError = "Can't wrap a Const OpImpl"
@@ -182,7 +182,7 @@ asText (VBool a) = show a
 asText (VChar a) = T.pack [a]
 asText (VList as) = mconcat (asText <$> as)
 asText (VFunction _) = error "Can't coerce function to text"
-asText VNull = "null"
+asText VNull = ""
 
 isNumeric :: Value -> Bool
 isNumeric (VInteger _) = True
@@ -314,7 +314,7 @@ instance Pretty Value where
   pretty (VFunction f) = pretty f
   pretty (VLambda cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
-  pretty VNull = "null"
+  pretty VNull = ""
 
 instance Pretty Function where
   pretty (Function name args) = "(" <> name <> " [" <> T.intercalate "," (pretty <$> args) <> "])"

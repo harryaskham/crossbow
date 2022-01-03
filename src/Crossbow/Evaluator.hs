@@ -248,6 +248,7 @@ deepEval (VFunction (Function name args)) =
 deepEval (VList as) = do
   as <- traverse deepEval as
   return . fmap VList $ sequence as
+deepEval l@(VLambda _) = compileLambda l
 deepEval v = return $ Right v
 
 -- Coerce lambas into functions for the builtins
