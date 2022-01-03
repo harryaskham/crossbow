@@ -56,14 +56,14 @@ program = clauses
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
 
-value :: P (IO Value)
+value :: P Value
 value =
   ignoreSpaces $
     firstOf
       [ vRange,
         vNumber,
         inParens value,
-        --vLambda,
+        vLambda,
         vIdentifier,
         vFunction,
         vList,
@@ -72,73 +72,62 @@ value =
         vBool
       ]
   where
-    vIdentifier :: P (IO Value)
+    vIdentifier :: P Value
     vIdentifier = do
       char '$'
       n <- many1 digit
-      return . return $ VIdentifier ("$" <> T.pack n)
-    vNegativeNumber :: P (IO Value)
+      return $ VIdentifier ("$" <> T.pack n)
+    vNegativeNumber :: P Value
     vNegativeNumber = do
       char '('
       x <- ignoreSpaces $ char '-' *> vNumber
       char ')'
-      return (negate <$> x)
-    vPositiveNumber :: P (IO Value)
+      return (negate x)
+    vPositiveNumber :: P Value
     vPositiveNumber = do
       x <- T.pack <$> ignoreSpaces (many1 (oneOf ".0123456789"))
       if "." `T.isInfixOf` x
-        then return . return . VDouble $ (fst . fromRight' . signed double) x
-        else return . return . VInteger $ (fst . fromRight' . signed decimal) x
-    vNumber :: P (IO Value)
+        then return . VDouble $ (fst . fromRight' . signed double) x
+        else return . VInteger $ (fst . fromRight' . signed decimal) x
+    vNumber :: P Value
     vNumber = try vNegativeNumber <|> try vPositiveNumber
-    vList :: P (IO Value)
-    vList = do
-      do
-        vsIO <- between (char '[') (char ']') (value `sepBy` ignoreSpaces (char ','))
-        return $ VList <$> sequence vsIO
-    vChar :: P (IO Value)
-    vChar = return . VChar <$> between (char '\'') (char '\'') anyChar
-    vString :: P (IO Value)
-    vString = return . VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
-    vBool :: P (IO Value)
-    vBool = return . VBool <$> (string "False" $> False <|> string "True" $> True)
-    vRange :: P (IO Value)
+    vList :: P Value
+    vList = VList <$> between (char '[') (char ']') (value `sepBy` ignoreSpaces (char ','))
+    vChar :: P Value
+    vChar = VChar <$> between (char '\'') (char '\'') anyChar
+    vString :: P Value
+    vString = VList <$> between (char '"') (char '"') (many (VChar <$> noneOf "\""))
+    vBool :: P Value
+    vBool = VBool <$> (string "False" $> False <|> string "True" $> True)
+    vRange :: P Value
     vRange = do
-      aIO <- ignoreSpaces vNumber
+      a <- ignoreSpaces vNumber
       ignoreSpaces (string ":")
-      bIO <- ignoreSpaces vNumber
-      return do
-        VInteger a <- withPrettyError . castToInt <$> aIO
-        VInteger b <- withPrettyError . castToInt <$> bIO
-        return $ VList (VInteger <$> [a .. b])
+      b <- ignoreSpaces vNumber
+      let VInteger a' = withPrettyError . castToInt $ a
+      let VInteger b' = withPrettyError . castToInt $ b
+      return $ VList (VInteger <$> [a' .. b'])
     -- An infix binary function bound inside parens
-    vFuncBin :: P (IO Value)
+    vFuncBin :: P Value
     vFuncBin =
       do
         char '('
-        a1IO <- value
-        vfIO <- vFunc
-        a2IO <- value
+        a1 <- value
+        (VFunction (Function name _)) <- vFunc
+        a2 <- value
         char ')'
-        return do
-          a1 <- a1IO
-          (VFunction (Function name _)) <- vfIO
-          a2 <- a2IO
-          return (VFunction (Function name [a1, a2]))
+        return (VFunction (Function name [a1, a2]))
     -- A polish notation left-applied func with maybe unbound variables
-    vFuncL :: P (IO Value)
+    vFuncL :: P Value
     vFuncL = do
-      vfIO <- vFunc
+      (VFunction (Function name _)) <- vFunc
       spaces
-      argsIO <- many1 value
-      return do
-        VFunction (Function name _) <- vfIO
-        args <- sequence argsIO
-        return $ VFunction (Function name args)
+      args <- many1 value
+      return (VFunction (Function name args))
     -- Finally, a func with no arguments
-    vFunc :: P (IO Value)
-    vFunc = return . VFunction <$> function
-    vFunction :: P (IO Value)
+    vFunc :: P Value
+    vFunc = VFunction <$> function
+    vFunction :: P Value
     vFunction =
       firstOf
         [ vFuncL,
@@ -148,60 +137,33 @@ value =
 
 -- On the fly function with arguments designated $0, $1... within {}
 -- If lambda has no argument, we assume it is preceded by $0
-{- -- TODO: Reenable in the new scheme
-vLambda :: P (IO Value)
+vLambda :: P Value
 vLambda = do
-  clauses' <- clauses
-  return do
-    char '{'
-    csIO <- clauses'
-    char '}'
-    -- TODO: Use these
-    return do
-      numArgs <- do
-        cs <- sequence csIO
+  cs <- between (char '{') (char '}') clauses
+  let numArgs =
         case mapMaybe maxArgIx cs of
-          [] -> return 0
-          ns -> return $ L.maximum ns + 1
-      let csIOWithInitial =
-            case numArgs of
-              0 -> pure (VIdentifier "$0") : csIO
-              _ -> csIO
-      return
-        ( VFunction
-            ( Function
-                Nothing
-                (Valence (max 1 numArgs))
-                ( HSImplIO
-                    ( \pp args -> do
-                        let csIO' = substituteArgs args <$> csIOWithInitial
-                        vE <- runClauses pp csIO'
-                        -- TODO: Return to here once we enforce that OpImpl returns an Either
-                        case vE of
-                          Left e -> error (pretty e)
-                          Right v -> do
-                            deepVE <- deepEval pp v
-                            case deepVE of
-                              Left e -> error (pretty e)
-                              Right deepV -> return deepV
-                    )
-                )
-                (replicate (max 1 numArgs) Unbound)
-            )
-        )
-  -}
-{-
+          [] -> 0
+          ns -> L.maximum ns + 1
+  let csWithInitial =
+        case numArgs of
+          0 -> VIdentifier "$0" : cs
+          _ -> cs
+  return $ VLambda (Valence (max numArgs 1)) csWithInitial
+
 maxArgIx :: Value -> Maybe Int
 maxArgIx i@(VIdentifier _) = Just $ identifierIx i
-maxArgIx (VFunction f@Function {}) =
-  case mapMaybe maxArgIx $ unbind <$> getBound f of
+maxArgIx (VFunction (Function _ args)) =
+  case mapMaybe maxArgIx args of
+    [] -> Nothing
+    ixs -> Just $ L.maximum ixs
+maxArgIx (VList as) =
+  case mapMaybe maxArgIx as of
     [] -> Nothing
     ixs -> Just $ L.maximum ixs
 maxArgIx _ = Nothing
--}
 
-mapWrap :: Int -> Function -> Reader ParseContext Function
-mapWrap 0 f = return f
+mapWrap :: Int -> Function -> Function
+mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])
 
 -- Parses arbitrary operator names, which will be looked up later

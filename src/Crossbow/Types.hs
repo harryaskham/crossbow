@@ -13,7 +13,7 @@ import Text.Show (showsPrec)
 
 type P = GenParser Char ()
 
-type ProgramParser = P [IO Value]
+type ProgramParser = P [Value]
 
 type Builtins = Map Text (Valence, OpImpl)
 
@@ -34,6 +34,7 @@ data CrossbowError
   | CastToBoolError Value
   | InternalError Text
   | EmptyProgramError
+  | NonLambdaCompilationError Value
   | ApplyError [CrossbowError]
 
 -- TODO: Remove this when making entire REPL error-safe
@@ -51,6 +52,7 @@ instance Pretty CrossbowError where
   pretty (CastToCharError v) = "Cannot cast to Char: " <> show v
   pretty (CastToBoolError v) = "Cannot cast to Bool: " <> show v
   pretty (InternalError e) = "Internal error: " <> e
+  pretty (NonLambdaCompilationError v) = "Attempting to compile non-lambda: " <> show v
   pretty EmptyProgramError = "No program supplied"
 
 data Value
@@ -60,6 +62,7 @@ data Value
   | VChar Char
   | VList [Value]
   | VFunction Function
+  | VLambda Valence [Value]
   | VIdentifier Text
   deriving (Show, Eq)
 
@@ -293,6 +296,7 @@ instance Pretty Value where
     | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
     | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
   pretty (VFunction f) = pretty f
+  pretty (VLambda _ cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
 
 instance Pretty Function where

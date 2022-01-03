@@ -22,7 +22,7 @@ import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 debugParser :: Bool
 debugParser = True
 
-parseProgram :: Text -> Eval (Either ParseError [IO Value])
+parseProgram :: Text -> Eval (Either ParseError [Value])
 parseProgram t = do
   programParser <- asks _programParser
   return $ parse programParser "" . T.unpack $ t
@@ -32,7 +32,7 @@ debugParseProgram t = do
   programParser <- asks _programParser
   liftIO do
     print "Running parse test"
-    parseTest (unsafePerformIO <$$> programParser) (T.unpack t)
+    parseTest programParser (T.unpack t)
     print "Parse test complete"
 
 compile :: Text -> Eval (Either CrossbowError (IO Value))
@@ -41,39 +41,75 @@ compile t = do
   pE <- parseProgram t
   case pE of
     Left e -> return $ Left (UncaughtParseError e)
-    Right csIO -> runClauses csIO
+    Right cs -> runClauses cs
 
 compileUnsafe :: Text -> Eval (IO Value)
 compileUnsafe t = do
   pE <- compile t
   return $ withPrettyError pE
 
-runClauses :: [IO Value] -> Eval (Either CrossbowError (IO Value))
+runClauses :: [Value] -> Eval (Either CrossbowError (IO Value))
 runClauses [] = return (Left EmptyProgramError)
 -- We might first start with a fully bound clause, so ensure that one is deeply eval'd before moving on
-runClauses (cIO : cIOs) = do
-  c <- liftIO cIO
+runClauses (c : cs) = do
   cDeepE <- deepEval c
   case cDeepE of
     Left e -> return $ Left e
-    Right cDeep -> go (return cDeep) cIOs
+    Right cDeep -> go (return cDeep) cs
   where
-    go :: IO Value -> [IO Value] -> Eval (Either CrossbowError (IO Value))
+    go :: IO Value -> [Value] -> Eval (Either CrossbowError (IO Value))
     go vIO [] = return $ Right vIO
-    go vIO (cIO : cIOs) = do
+    go vIO (c : cs) = do
       v <- liftIO vIO
-      c <- liftIO cIO
       apE <- apply v c
       case apE of
         Left e -> return $ Left e
         Right v' -> do
+          -- TODO: Can we do away with this deepEval? Doesn't apply handle it?
           deepVE <- deepEval v'
           case deepVE of
             Left e -> return $ Left e
-            Right deepV -> go (return deepV) cIOs
+            Right deepV -> go (return deepV) cs
+
+-- Build a vFunction that will take arguments, substitute, and then run clauses
+-- Does so by creating a hashed name for this lambda and storing it with our program context
+-- TODO: Still need to add this to the State, so we do need Eval to become StateT
+compileLambda :: Value -> Eval (Either CrossbowError Value)
+compileLambda (VLambda (Valence v) clauses) =
+  do
+    let lambdaName = "onelambda"
+        impl =
+          ( HSImpl
+              ( \args -> do
+                  let cs' = substituteArgs args <$> clauses
+                  vE <- runClauses cs'
+                  case vE of
+                    Left e -> error (pretty e)
+                    Right vIO -> do
+                      v <- liftIO vIO
+                      deepVE <- deepEval v
+                      case deepVE of
+                        Left e -> error (pretty e)
+                        Right deepV -> return deepV
+              )
+          )
+    return . Right $ VFunction (Function lambdaName [])
+compileLambda v = return . Left $ NonLambdaCompilationError v
 
 -- Apply the second value to the first in left-to-right fashion.
 apply :: Value -> Value -> Eval (Either CrossbowError Value)
+-- Lambdas get JIT compiled here
+apply l@(VLambda _ _) v = do
+  lE <- compileLambda l
+  case lE of
+    Left e -> return $ Left e
+    Right f -> apply f v
+-- Lambdas get JIT compiled here
+apply v l@(VLambda _ _) = do
+  lE <- compileLambda l
+  case lE of
+    Left e -> return $ Left e
+    Right f -> apply v f
 -- If we have a function in program state, apply to the right
 apply (VFunction f) v = applyF f v BindFromRight
 -- If we have a value in program state and encounter a function, apply it
@@ -152,23 +188,16 @@ evalF v = return $ Right v
 -- Turn e.g. $4 into 4
 identifierIx :: Value -> Int
 identifierIx (VIdentifier i) = fst . fromRight' $ decimal (T.drop 1 i)
+identifierIx v = error $ "Cannot get identifier index for value: " <> show v
 
 -- Sub any Identifier placeholders with their actual values
-{- TODO reenable
-substituteArgs :: [Value] -> IO Value -> IO Value
-substituteArgs subs vIO = do
-  v <- vIO
-  case v of
-    i@(VIdentifier _) -> return $ subs !! identifierIx i
-    (VList as) -> VList <$> sequence (substituteArgs subs . pure <$> as)
-    (VFunction (Function n valence impl args)) -> do
-      args' <- traverse (substituteBoundArg subs) args
-      return $ VFunction (Function n valence impl args')
-    _ -> return v
-  where
-    substituteBoundArg _ Unbound = return Unbound
-    substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
--}
+substituteArgs :: [Value] -> Value -> Value
+substituteArgs subs i@(VIdentifier _) = subs !! identifierIx i
+substituteArgs subs (VList as) = VList (substituteArgs subs <$> as)
+substituteArgs subs (VFunction (Function name args)) =
+  VFunction (Function name (substituteArgs subs <$> args))
+-- In particular we skip lambdas here, which should allow for nesting
+substituteArgs _ v = v
 
 -- Deeply evaluate the given value.
 -- Ensure if this is a function that all arguments are strictly evaluated.
