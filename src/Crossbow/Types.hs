@@ -25,7 +25,7 @@ data ProgramContext = ProgramContext
 type CrossbowEval = State ProgramContext
 
 data CrossbowError
-  = TooManyArgumentsError OpType Int Int
+  = TooManyArgumentsError Text Int Int
   | UncaughtParseError ParseError
   | EvalError Text
   | CastToIntError Value
@@ -37,13 +37,13 @@ data CrossbowError
   | ApplyError [CrossbowError]
 
 -- TODO: Remove this when making entire REPL error-safe
-withPrettyError :: Either CrossbowError Value -> Value
+withPrettyError :: Either CrossbowError a -> a
 withPrettyError = \case
   Left e -> error (pretty e)
   Right v -> v
 
 instance Pretty CrossbowError where
-  pretty (TooManyArgumentsError o v numArgs) = show o <> " expected " <> show v <> " args, got " <> show numArgs
+  pretty (TooManyArgumentsError o v numArgs) = o <> " expected " <> show v <> " args, got " <> show numArgs
   pretty (UncaughtParseError e) = "Parsing error: " <> show e
   pretty (EvalError e) = "Evaluation error: " <> show e
   pretty (CastToIntError v) = "Cannot cast to Integer: " <> show v
@@ -255,27 +255,21 @@ instance Ord Value where
   (VList _) <= _ = error "Invalid Ord on list"
   (VBool a) <= (VBool b) = a <= b
 
-data Argument = Unbound | Bound Value deriving (Show, Eq)
-
-data Function = Function (Maybe Text) Valence OpImpl [Argument]
+data Function = Function Text [Value]
 
 instance Show Function where
-  showsPrec i (Function (Just n) _ _ args) = showsPrec i (n, args)
-  showsPrec i (Function Nothing _ k_ args) = showsPrec i ("<function>", args)
+  showsPrec i (Function n args) = showsPrec i (n, args)
 
 instance Eq Function where
   (==) = error "Function equality"
 
-data OpType = OpType Text deriving (Show, Eq)
-
 newtype Valence = Valence Int deriving (Show, Eq)
 
-data OpImpl
-  = HSImpl (ProgramParser -> [Value] -> Value)
-  | HSImplIO (ProgramParser -> [Value] -> IO Value)
-  | CBImpl Text
+type Eval = ReaderT ProgramContext IO
 
-data Operator = Operator OpType Valence deriving (Show, Eq)
+data OpImpl
+  = HSImpl ([Value] -> Eval Value)
+  | CBImpl Text
 
 data BindDir = BindFromLeft | BindFromRight
 
@@ -302,13 +296,4 @@ instance Pretty Value where
   pretty (VIdentifier i) = i
 
 instance Pretty Function where
-  pretty (Function name _ _ args) =
-    let n = fromMaybe "<function>" name
-     in "(" <> n <> " " <> T.intercalate "," (pretty <$> args) <> ")"
-
-instance Pretty Argument where
-  pretty Unbound = "_"
-  pretty (Bound v) = pretty v
-
-instance Pretty OpType where
-  pretty (OpType t) = t
+  pretty (Function name args) = "(" <> name <> " [" <> T.intercalate "," (pretty <$> args) <> "])"

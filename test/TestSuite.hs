@@ -10,11 +10,13 @@ import Test.HUnit (assertEqual, assertFailure)
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
-  let programParser = runReader program builtins
-  pE <- compile programParser source
+  let programContext = ProgramContext program builtins
+  pE <- runReaderT (compile source) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
-    Right v -> assertEqual (T.unpack msg) v expected
+    Right vIO -> do
+      v <- vIO
+      assertEqual (T.unpack msg) v expected
 
 main :: IO ()
 main = do
@@ -24,17 +26,17 @@ main = do
   assertEvaluatesTo "negative int" "(-123)" (VInteger (-123))
   assertEvaluatesTo "positive double" "1.4" (VDouble 1.4)
   assertEvaluatesTo "negative double" "(-1.4)" (VDouble (-1.4))
-  assertEvaluatesTo "addition" "1|+_2" (VInteger 3)
-  assertEvaluatesTo "multiplication" "2|(_*4)" (VInteger 8)
-  assertEvaluatesTo "double addition" "1.0|+_2.0" (VDouble 3.0)
-  assertEvaluatesTo "int/double addition" "1|+_2.0" (VDouble 3.0)
+  assertEvaluatesTo "addition" "1|+ 2" (VInteger 3)
+  assertEvaluatesTo "multiplication" "2|* 4)" (VInteger 8)
+  assertEvaluatesTo "double addition" "1.0|+ 2.0" (VDouble 3.0)
+  assertEvaluatesTo "int/double addition" "1|+ 2.0" (VDouble 3.0)
   assertEvaluatesTo "addition with spaces" "    1 |   +     2  " (VInteger 3)
-  assertEvaluatesTo "add a negative" "1|+_(-2)" (VInteger (-1))
+  assertEvaluatesTo "add a negative" "1|+ (-2)" (VInteger (-1))
   assertEvaluatesTo "braced list literal" "[1,2,3]" (VList $ VInteger <$> [1, 2, 3])
   assertEvaluatesTo "nested list literal" "[1,[2,3],4]" (VList [VInteger 1, VList [VInteger 2, VInteger 3], VInteger 4])
-  assertEvaluatesTo "list concatenation" "[1,2,3]|++_[4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
-  assertEvaluatesTo "list addition" "[1,2,3]|+_10" (VList $ VInteger <$> [11, 12, 13])
-  assertEvaluatesTo "reverse list addition" "10|+_[1,2,3]" (VList $ VInteger <$> [11, 12, 13])
+  assertEvaluatesTo "list concatenation" "[1,2,3]|++ [4,5]" (VList $ VInteger <$> [1, 2, 3, 4, 5])
+  assertEvaluatesTo "list addition" "[1,2,3]|+ 10" (VList $ VInteger <$> [11, 12, 13])
+  assertEvaluatesTo "reverse list addition" "10|+ [1,2,3]" (VList $ VInteger <$> [11, 12, 13])
   assertEvaluatesTo "full function application" "+ 1 2" (VInteger 3)
   assertEvaluatesTo "min" "min 10 20" (VInteger 10)
   assertEvaluatesTo "max" "max 10 20" (VInteger 20)
@@ -44,9 +46,9 @@ main = do
   assertEvaluatesTo "cast list to double" "[2, 3]|double" (VList $ VDouble <$> [2.0, 3.0])
   assertEvaluatesTo "string aliases to list" "\"hi\"" (VList $ VChar <$> ['h', 'i'])
   assertEvaluatesTo "read file" "read \"test/test_input.txt\"" (VList $ VChar <$> T.unpack "test\ninput\n")
-  assertEvaluatesTo "map over empty list" "map|+_1|[]" (VList [])
-  assertEvaluatesTo "map over list" "map|+_1|[1,2,3]" (VList $ VInteger <$> [2, 3, 4])
-  assertEvaluatesTo "map forward over list" "[1,2,3] | map | +_1" (VList $ VInteger <$> [2, 3, 4])
+  assertEvaluatesTo "map over empty list" "map|+ 1|[]" (VList [])
+  assertEvaluatesTo "map over list" "map|+ 1|[1,2,3]" (VList $ VInteger <$> [2, 3, 4])
+  assertEvaluatesTo "map forward over list" "[1,2,3] | map | + 1" (VList $ VInteger <$> [2, 3, 4])
   assertEvaluatesTo "fold over empty list" "foldl | + | 0 | []" (VInteger 0)
   assertEvaluatesTo "fold over list" "foldl | + | 0 | [1,2,3]" (VInteger 6)
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)

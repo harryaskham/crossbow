@@ -17,143 +17,139 @@ import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Parsec (parserTrace)
-import Text.ParserCombinators.Parsec (parse, parseTest)
+import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 
 debugParser :: Bool
 debugParser = False
 
-compile :: P [IO Value] -> Text -> IO (Either CrossbowError Value)
-compile programParser t = do
-  when debugParser do
+parseProgram :: Text -> Eval (Either ParseError [IO Value])
+parseProgram t = do
+  programParser <- asks _programParser
+  return $ parse programParser "" . T.unpack $ t
+
+debugParseProgram :: Text -> Eval ()
+debugParseProgram t = do
+  programParser <- asks _programParser
+  liftIO do
     print "Running parse test"
-    s <- parseTest (unsafePerformIO <$$> programParser) (T.unpack t)
+    parseTest (unsafePerformIO <$$> programParser) (T.unpack t)
     print "Parse test complete"
-    print s
-  case parse programParser "" . T.unpack $ t of
-    Left e -> return . Left $ UncaughtParseError e
-    Right cs -> runClauses programParser cs
 
-compileUnsafe :: P [IO Value] -> Text -> IO Value
-compileUnsafe programParser p = withPrettyError <$> compile programParser p
+compile :: Text -> Eval (Either CrossbowError (IO Value))
+compile t = do
+  when debugParser (debugParseProgram t)
+  pE <- parseProgram t
+  case pE of
+    Left e -> return $ Left (UncaughtParseError e)
+    Right csIO -> runClauses csIO
 
-runClauses :: P [IO Value] -> [IO Value] -> IO (Either CrossbowError Value)
-runClauses _ [] = return (Left EmptyProgramError)
+compileUnsafe :: Text -> Eval (IO Value)
+compileUnsafe t = do
+  pE <- compile t
+  return $ withPrettyError pE
+
+runClauses :: [IO Value] -> Eval (Either CrossbowError (IO Value))
+runClauses [] = return (Left EmptyProgramError)
 -- We might first start with a fully bound clause, so ensure that one is deeply eval'd before moving on
-runClauses programParser (cIO : cIOs) = do
-  c <- cIO
-  exE <- deepEval programParser c
-  case exE of
+runClauses (cIO : cIOs) = do
+  c <- liftIO cIO
+  cDeepE <- deepEval c
+  case cDeepE of
     Left e -> return $ Left e
     Right cDeep -> go (return cDeep) cIOs
   where
-    go :: IO Value -> [IO Value] -> IO (Either CrossbowError Value)
-    go vIO [] = Right <$> vIO
+    go :: IO Value -> [IO Value] -> Eval (Either CrossbowError (IO Value))
+    go vIO [] = return $ Right vIO
     go vIO (cIO : cIOs) = do
-      v <- vIO
-      c <- cIO
-      exE <- E.try (apply programParser v c) :: (IO (Either SomeException (Either CrossbowError Value)))
-      case exE of
-        Left e -> return . Left $ InternalError (show e)
-        Right vE -> case vE of
-          Left e -> return $ Left e
-          Right v -> go (return v) cIOs
+      v <- liftIO vIO
+      c <- liftIO cIO
+      apE <- apply v c
+      case apE of
+        Left e -> return $ Left e
+        Right v' -> do
+          deepVE <- deepEval v'
+          case deepVE of
+            Left e -> return $ Left e
+            Right deepV -> go (return deepV) cIOs
 
 -- Apply the second value to the first in left-to-right fashion.
-apply :: P [IO Value] -> Value -> Value -> IO (Either CrossbowError Value)
+apply :: Value -> Value -> Eval (Either CrossbowError Value)
 -- If we have a function in program state, apply to the right
-apply programParser (VFunction f) v = applyF programParser f v BindFromLeft
+apply (VFunction f) v = applyF f v BindFromRight
 -- If we have a value in program state and encounter a function, apply it
-apply programParser v (VFunction f) = applyF programParser f v BindFromRight
+apply v (VFunction f) = applyF f v BindFromLeft
 -- Application of lists tries to ziplist
-apply programParser (VList as@((VFunction _) : _)) (VList bs) =
+apply (VList as@((VFunction _) : _)) (VList bs) =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-    rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromLeft
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromLeft
     case partitionEithers (getZipList rs) of
       ([], rs) -> return $ Right $ VList rs
       (es, _) -> return $ Left $ ApplyError es
 -- Fork values with post-application of applicatives should work the same way
-apply programParser (VList bs) (VList as@((VFunction _) : _)) =
+apply (VList bs) (VList as@((VFunction _) : _)) =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-    rs <- sequence $ applyF programParser <$> fs <*> bz <*> pure BindFromRight
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromRight
     case partitionEithers (getZipList rs) of
       ([], rs) -> return $ Right $ VList rs
       (es, _) -> return $ Left $ ApplyError es
-
 -- If we have a value with a value, just override it
-apply _ _ v = return $ Right v
+apply _ v = return $ Right v
 
 -- Binds the next unbound value to that given
 bindNext :: Function -> Value -> BindDir -> Function
-bindNext f@(Function t valence impl args) v bindDir =
+bindNext (Function name args) v bindDir =
   case bindDir of
-    BindFromLeft -> Function t valence impl (reverse . fst $ foldl' bindArg ([], False) args)
-    BindFromRight -> Function t valence impl (fst $ foldr (flip bindArg) ([], False) args)
-  where
-    bindArg (args, True) a = (a : args, True)
-    bindArg (args, False) a@(Bound _) = (a : args, False)
-    bindArg (args, False) Unbound = (Bound v : args, True)
+    BindFromLeft -> Function name (v : args)
+    BindFromRight -> Function name (args ++ [v])
 
-getUnbound :: Function -> [Argument]
-getUnbound (Function _ _ _ args) = filter (== Unbound) args
-
-getBound :: Function -> [Argument]
-getBound (Function _ _ _ args) = filter (/= Unbound) args
-
--- Either partially bind this value, or if it's fully applied, evaluate it down
-applyF :: P [IO Value] -> Function -> Value -> BindDir -> IO (Either CrossbowError Value)
-applyF programParser f v bindDir = do
-  let unbound = getUnbound f
-  strictV <- deepEval programParser v
-  case strictV of
+applyF :: Function -> Value -> BindDir -> Eval (Either CrossbowError Value)
+applyF f v bindDir = do
+  strictVE <- deepEval v
+  case strictVE of
     Left e -> return $ Left e
-    Right strictV ->
-      if
-          | length unbound == 1 -> deepEval programParser (VFunction (bindNext f strictV bindDir))
-          | length unbound > 1 -> return . Right $ VFunction (bindNext f strictV bindDir)
-          | otherwise -> return . Left $ EvalError $ "Attempting to bind a fully bound function: " <> show (f, strictV)
-
-unbind :: Argument -> Value
-unbind (Bound v) = v
+    Right strictV -> return $ Right (VFunction (bindNext f strictV bindDir))
 
 isIdentifier :: Value -> Bool
 isIdentifier (VIdentifier _) = True
 isIdentifier _ = False
 
-runCBImpl :: P [IO Value] -> Text -> [Value] -> IO (Either CrossbowError Value)
-runCBImpl programParser cbF argVals = do
-  pE <- compile programParser cbF
+runCBImpl :: Text -> [Value] -> Eval (Either CrossbowError Value)
+runCBImpl cbF args = do
+  pE <- compile cbF
   case pE of
     Left e -> return $ Left e
-    Right f -> do
-      result <- foldM (\acc x -> withPrettyError <$> apply programParser acc x) f argVals
+    Right fIO -> do
+      f <- liftIO fIO
+      result <- foldM (\acc x -> withPrettyError <$> apply acc x) f args
       return $ Right result
 
-evalF :: P [IO Value] -> Value -> IO (Either CrossbowError Value)
-evalF programParser vf@(VFunction f@(Function _ _ impl args))
-  -- If we're not fully bound, this is as far as we can go
-  | not (null $ getUnbound f) = return $ Right vf
-  -- If we have any bound identifier variables variables we can't eval down any further either
-  | any isIdentifier argVals = return $ Right vf
-  | otherwise =
-    case impl of
-      HSImpl hsF -> return . Right $ hsF programParser argVals
-      HSImplIO hsF -> Right <$> hsF programParser argVals
-      CBImpl cbF -> runCBImpl programParser cbF argVals
-  where
-    argVals = unbind <$> args
-evalF _ v = return $ Right v
+evalF :: Value -> Eval (Either CrossbowError Value)
+evalF vf@(VFunction (Function name args)) = do
+  builtins <- asks _builtins
+  case M.lookup name builtins of
+    Nothing -> return . Left . EvalError $ "No value named: " <> name
+    Just (Valence v, impl) ->
+      if
+          | length args == v ->
+            case impl of
+              HSImpl hsF -> Right <$> hsF args
+              CBImpl cbF -> runCBImpl cbF args
+          | length args > v -> return $ Left (TooManyArgumentsError name v (length args))
+          | otherwise -> return $ Right vf
+evalF v = return $ Right v
 
 -- Turn e.g. $4 into 4
 identifierIx :: Value -> Int
 identifierIx (VIdentifier i) = fst . fromRight' $ decimal (T.drop 1 i)
 
 -- Sub any Identifier placeholders with their actual values
+{- TODO reenable
 substituteArgs :: [Value] -> IO Value -> IO Value
 substituteArgs subs vIO = do
   v <- vIO
@@ -167,65 +163,56 @@ substituteArgs subs vIO = do
   where
     substituteBoundArg _ Unbound = return Unbound
     substituteBoundArg subs (Bound v) = Bound <$> substituteArgs subs (pure v)
-
-deepEvalArg :: P [IO Value] -> Argument -> IO (Either CrossbowError Argument)
-deepEvalArg programParser (Bound v) = Bound <$$> deepEval programParser v
-deepEvalArg _ Unbound = return . return $ Unbound
+-}
 
 -- Deeply evaluate the given value.
 -- Ensure if this is a function that all arguments are strictly evaluated.
-deepEval :: P [IO Value] -> Value -> IO (Either CrossbowError Value)
-deepEval programParser (VFunction (Function name valence impl args)) =
+deepEval :: Value -> Eval (Either CrossbowError Value)
+deepEval (VFunction (Function name args)) =
   do
-    (errors, argsStrict) <- partitionEithers <$> traverse (deepEvalArg programParser) args
+    (errors, argsStrict) <- partitionEithers <$> traverse deepEval args
     if not (null errors)
       then return . Left $ L.head errors
-      else evalF programParser (VFunction (Function name valence impl argsStrict))
-deepEval programParser (VList as) = do
-  as <- traverse (deepEval programParser) as
+      else evalF (VFunction (Function name argsStrict))
+deepEval (VList as) = do
+  as <- traverse deepEval as
   return . fmap VList $ sequence as
-deepEval _ v = return $ Right v
-
-mkHSImpl :: ([Value] -> Value) -> OpImpl
-mkHSImpl f = HSImpl (\_ args -> f args)
-
-mkHSImplIO :: ([Value] -> IO Value) -> OpImpl
-mkHSImplIO f = HSImplIO (\_ args -> f args)
+deepEval v = return $ Right v
 
 builtins :: Map Text (Valence, OpImpl)
 builtins =
   M.fromList
-    [ ("+", (Valence 2, mkHSImpl (\[a, b] -> a + b))),
-      ("++", (Valence 2, mkHSImpl (\[VList a, VList b] -> VList $ a ++ b))),
-      ("*", (Valence 2, mkHSImpl (\[a, b] -> a * b))),
-      ("^", (Valence 2, mkHSImpl (\[a, b] -> a ^ b))),
-      ("-", (Valence 2, mkHSImpl (\[a, b] -> a - b))),
-      ("abs", (Valence 1, mkHSImpl (\[a] -> abs a))),
-      ("negate", (Valence 1, mkHSImpl (\[a] -> negate a))),
-      ("mod", (Valence 2, mkHSImpl (\[a, b] -> a `mod` b))),
-      ("div", (Valence 2, mkHSImpl (\[a, b] -> a `div` b))),
-      ("==", (Valence 2, mkHSImpl (\[a, b] -> VBool $ a == b))),
-      ("<=", (Valence 2, mkHSImpl (\[a, b] -> VBool $ a <= b))),
-      ("<", (Valence 2, mkHSImpl (\[a, b] -> VBool $ a < b))),
-      (">=", (Valence 2, mkHSImpl (\[a, b] -> VBool $ a >= b))),
-      (">", (Valence 2, mkHSImpl (\[a, b] -> VBool $ a > b))),
-      (":", (Valence 2, mkHSImpl (\[a, b] -> vCons a b))),
-      ("min", (Valence 2, mkHSImpl (\[a, b] -> min a b))),
-      ("max", (Valence 2, mkHSImpl (\[a, b] -> max a b))),
+    [ ("+", (Valence 2, HSImpl (\[a, b] -> return $ a + b))),
+      ("++", (Valence 2, HSImpl (\[VList a, VList b] -> return $ VList $ a ++ b))),
+      ("*", (Valence 2, HSImpl (\[a, b] -> return $ a * b))),
+      ("^", (Valence 2, HSImpl (\[a, b] -> return $ a ^ b))),
+      ("-", (Valence 2, HSImpl (\[a, b] -> return $ a - b))),
+      ("abs", (Valence 1, HSImpl (\[a] -> return $ abs a))),
+      ("negate", (Valence 1, HSImpl (\[a] -> return $ negate a))),
+      ("mod", (Valence 2, HSImpl (\[a, b] -> return $ a `mod` b))),
+      ("div", (Valence 2, HSImpl (\[a, b] -> return $ a `div` b))),
+      ("==", (Valence 2, HSImpl (\[a, b] -> return $ VBool $ a == b))),
+      ("<=", (Valence 2, HSImpl (\[a, b] -> return $ VBool $ a <= b))),
+      ("<", (Valence 2, HSImpl (\[a, b] -> return $ VBool $ a < b))),
+      (">=", (Valence 2, HSImpl (\[a, b] -> return $ VBool $ a >= b))),
+      (">", (Valence 2, HSImpl (\[a, b] -> return $ VBool $ a > b))),
+      (":", (Valence 2, HSImpl (\[a, b] -> return $ vCons a b))),
+      ("min", (Valence 2, HSImpl (\[a, b] -> return $ min a b))),
+      ("max", (Valence 2, HSImpl (\[a, b] -> return $ max a b))),
       ("minOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic <= |if _ $1 $2}")),
       ("maxOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic > |if _ $1 $2}")),
       -- TODO: Redefine all the below using crossbow folds, maps, filters
-      ("id", (Valence 1, mkHSImpl (\[a] -> a))),
-      ("const", (Valence 2, mkHSImpl (\[a, _] -> a))),
-      ("cons", (Valence 2, mkHSImpl (\[a, b] -> vCons a b))),
-      ("ix", (Valence 2, mkHSImpl (\[VInteger a, VList b] -> b !! fromInteger a))),
-      ("drop", (Valence 2, mkHSImpl (\[VInteger n, VList as] -> VList (drop (fromIntegral n) as)))),
-      ("take", (Valence 2, mkHSImpl (\[VInteger n, VList as] -> VList (take (fromIntegral n) as)))),
-      ("head", (Valence 1, mkHSImpl (\[VList as] -> L.head as))),
-      ("tail", (Valence 1, mkHSImpl (\[VList as] -> VList $ L.tail as))),
+      ("id", (Valence 1, HSImpl (\[a] -> return a))),
+      ("const", (Valence 2, HSImpl (\[a, _] -> return a))),
+      ("cons", (Valence 2, HSImpl (\[a, b] -> return $ vCons a b))),
+      ("ix", (Valence 2, HSImpl (\[VInteger a, VList b] -> return $ b !! fromInteger a))),
+      ("drop", (Valence 2, HSImpl (\[VInteger n, VList as] -> return $ VList (drop (fromIntegral n) as)))),
+      ("take", (Valence 2, HSImpl (\[VInteger n, VList as] -> return $ VList (take (fromIntegral n) as)))),
+      ("head", (Valence 1, HSImpl (\[VList as] -> return $ L.head as))),
+      ("tail", (Valence 1, HSImpl (\[VList as] -> return $ VList $ L.tail as))),
       -- TODO: Make zip variadic
-      ("zip", (Valence 2, mkHSImpl (\[VList as, VList bs] -> VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
-      ("zip3", (Valence 3, mkHSImpl (\[VList as, VList bs, VList cs] -> VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs)))),
+      ("zip", (Valence 2, HSImpl (\[VList as, VList bs] -> return $ VList ((\(a, b) -> VList [a, b]) <$> zip as bs)))),
+      ("zip3", (Valence 3, HSImpl (\[VList as, VList bs, VList cs] -> return $ VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs)))),
       ("pairs", (Valence 1, CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}")),
       ("square", (Valence 1, CBImpl "{$0|length|flip fork|$0}")),
       ("enum", (Valence 1, CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}")),
@@ -233,10 +220,10 @@ builtins =
       ("windows", (Valence 2, CBImpl "{$1|square|enum|map (monadic drop)|map (take $0)|filter (lengthy $0)}")),
       ( "nap",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VInteger n, VFunction f, VList as] -> do
+          HSImpl
+            ( \[VInteger n, VFunction f, VList as] -> do
                 let vas = V.fromList as
-                a' <- withPrettyError <$> applyF pp f (vas V.! fromInteger n) BindFromLeft
+                a' <- withPrettyError <$> applyF f (vas V.! fromInteger n) BindFromLeft
                 let vas' = vas V.// [(fromInteger n, a')]
                 return (VList $ V.toList vas')
             )
@@ -249,14 +236,14 @@ builtins =
       ("snd", (Valence 1, CBImpl "ix 1")),
       ("thd", (Valence 1, CBImpl "ix 2")),
       -- TODO variadic
-      ("range", (Valence 2, mkHSImpl (\[VInteger a, VInteger b] -> VList $ VInteger <$> [a .. b]))),
+      ("range", (Valence 2, HSImpl (\[VInteger a, VInteger b] -> return $ VList $ VInteger <$> [a .. b]))),
       ( "map",
         ( Valence 2,
-          HSImplIO
-            ( let map _ [_, VList []] = return $ VList []
-                  map pp [VFunction f, VList (x : xs)] = do
-                    x' <- applyF pp f x BindFromLeft
-                    vCons (withPrettyError x') <$> map pp [VFunction f, VList xs]
+          HSImpl
+            ( let map [_, VList []] = return $ VList []
+                  map [VFunction f, VList (x : xs)] = do
+                    x' <- applyF f x BindFromLeft
+                    vCons (withPrettyError x') <$> map [VFunction f, VList xs]
                in map
             )
         )
@@ -264,27 +251,28 @@ builtins =
       ("count", (Valence 2, CBImpl "{$1|filter $0|length}")),
       ( "filter",
         ( Valence 2,
-          HSImplIO
-            ( let filter _ [_, VList []] = return $ VList []
-                  filter pp [VFunction f, VList (x : xs)] = do
-                    x' <- withPrettyError <$> applyF pp f x BindFromLeft
+          HSImpl
+            ( let filter [_, VList []] = return $ VList []
+                  filter [VFunction f, VList (x : xs)] = do
+                    x' <- withPrettyError <$> applyF f x BindFromLeft
                     if truthy x'
-                      then vCons x <$> filter pp [VFunction f, VList xs]
-                      else filter pp [VFunction f, VList xs]
+                      then vCons x <$> filter [VFunction f, VList xs]
+                      else filter [VFunction f, VList xs]
                in filter
             )
         )
       ),
       ( "case",
         ( Valence 2,
-          mkHSImpl
+          HSImpl
             ( \[a, VList xs] ->
-                let Just v = foldl' (\acc (VList [k, v]) -> if k == a then Just v else acc) Nothing xs
-                 in v
+                return $
+                  let Just v = foldl' (\acc (VList [k, v]) -> if k == a then Just v else acc) Nothing xs
+                   in v
             )
         )
       ),
-      ("if", (Valence 3, mkHSImpl (\[p, a, b] -> let (VBool p') = withPrettyError $ castToBool p in if p' then a else b))),
+      ("if", (Valence 3, HSImpl (\[p, a, b] -> return $ let (VBool p') = withPrettyError $ castToBool p in if p' then a else b))),
       ("aoc", (Valence 1, CBImpl "{$0|string|(\"test/aoc_input/\"++_)|(_++\".txt\")|read}")),
       ("sum", (Valence 1, CBImpl "foldl|+|0")),
       ("odd", (Valence 1, CBImpl "{$0|mod _ 2|bool}")),
@@ -299,12 +287,12 @@ builtins =
       ("length", (Valence 1, CBImpl "foldl (flip const (+1) _) 0")),
       ( "foldl",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VFunction f, acc, VList xs] ->
+          HSImpl
+            ( \[VFunction f, acc, VList xs] -> do
                 foldlM
                   ( \acc x -> do
-                      (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
-                      withPrettyError <$> applyF pp f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
+                      withPrettyError <$> applyF f' x BindFromLeft
                   )
                   acc
                   xs
@@ -313,12 +301,12 @@ builtins =
       ),
       ( "foldr",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VFunction f, VList xs, acc] ->
+          HSImpl
+            ( \[VFunction f, VList xs, acc] -> do
                 foldrM
                   ( \acc x -> do
-                      (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
-                      withPrettyError <$> applyF pp f' x BindFromLeft
+                      (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
+                      withPrettyError <$> applyF f' x BindFromLeft
                   )
                   acc
                   xs
@@ -327,14 +315,14 @@ builtins =
       ),
       ( "scanl",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VFunction f, acc, VList xs] ->
+          HSImpl
+            ( \[VFunction f, acc, VList xs] -> do
                 fmap VList . sequence $
                   scanl'
                     ( \accM x -> do
                         acc <- accM
-                        (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
-                        withPrettyError <$> applyF pp f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
+                        withPrettyError <$> applyF f' x BindFromLeft
                     )
                     (pure acc)
                     xs
@@ -343,14 +331,14 @@ builtins =
       ),
       ( "scanr",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VFunction f, acc, VList xs] ->
+          HSImpl
+            ( \[VFunction f, acc, VList xs] -> do
                 fmap VList . sequence $
                   scanr
                     ( \x accM -> do
                         acc <- accM
-                        (VFunction f') <- withPrettyError <$> applyF pp f acc BindFromLeft
-                        withPrettyError <$> applyF pp f' x BindFromLeft
+                        (VFunction f') <- withPrettyError <$> applyF f acc BindFromLeft
+                        withPrettyError <$> applyF f' x BindFromLeft
                     )
                     (pure acc)
                     xs
@@ -361,37 +349,38 @@ builtins =
       ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
       ("fold", (Valence 3, CBImpl "foldl")),
       ("scan", (Valence 3, CBImpl "scanl")),
-      ("transpose", (Valence 1, mkHSImpl (\[VList as] -> let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as)))),
+      ("transpose", (Valence 1, HSImpl (\[VList as] -> return $ let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as)))),
       -- TODO: Make flip work with other valences
       ( "flip",
         ( Valence 3,
-          HSImplIO
-            ( \pp [VFunction f, a, b] ->
+          HSImpl
+            ( \[VFunction f, a, b] ->
                 do
-                  (VFunction f') <- withPrettyError <$> applyF pp f b BindFromLeft
-                  withPrettyError <$> applyF pp f' a BindFromLeft
+                  (VFunction f') <- withPrettyError <$> applyF f b BindFromLeft
+                  withPrettyError <$> applyF f' a BindFromLeft
             )
         )
       ),
       ("reverse", (Valence 1, CBImpl "foldl (flip cons) [] _")),
       ( "ap",
         ( Valence 2,
-          HSImplIO
-            ( \pp [VFunction f, a] ->
-                withPrettyError <$> applyF pp f a BindFromLeft
+          HSImpl
+            ( \[VFunction f, a] -> do
+                pE <- applyF f a BindFromLeft
+                return $ withPrettyError pE
             )
         )
       ),
-      ("fork", (Valence 2, mkHSImpl (\[n, a] -> let VInteger n' = withPrettyError . castToInt $ n in VList (replicate (fromInteger n') a)))),
+      ("fork", (Valence 2, HSImpl (\[n, a] -> return $ let VInteger n' = withPrettyError . castToInt $ n in VList (replicate (fromInteger n') a)))),
       ( "monadic",
         ( Valence 2,
-          HSImplIO
-            ( \pp [VFunction f, VList args] ->
+          HSImpl
+            ( \[VFunction f, VList args] -> do
                 foldlM
                   ( \v a -> do
                       case v of
                         VFunction f ->
-                          withPrettyError <$> applyF pp f a BindFromLeft
+                          withPrettyError <$> applyF f a BindFromLeft
                         _ -> return v
                   )
                   (VFunction f)
@@ -399,48 +388,49 @@ builtins =
             )
         )
       ),
-      ("lines", (Valence 1, mkHSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.lines (unchar <$> t)))))),
-      ("words", (Valence 1, mkHSImpl (\[VList t] -> let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.words (unchar <$> t)))))),
+      ("lines", (Valence 1, HSImpl (\[VList t] -> return $ let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.lines (unchar <$> t)))))),
+      ("words", (Valence 1, HSImpl (\[VList t] -> return $ let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.words (unchar <$> t)))))),
       ("ints", (Valence 1, CBImpl "{lines|int}")),
-      ("int", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToInt $ a))),
-      ("double", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToDouble $ a))),
-      ("char", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToChar $ a))),
-      ("bool", (Valence 1, mkHSImpl (\[a] -> withPrettyError . castToBool $ a))),
-      ("string", (Valence 1, mkHSImpl (\[a] -> VList $ VChar <$> T.unpack (asText a)))),
+      ("int", (Valence 1, HSImpl (\[a] -> return $ withPrettyError . castToInt $ a))),
+      ("double", (Valence 1, HSImpl (\[a] -> return $ withPrettyError . castToDouble $ a))),
+      ("char", (Valence 1, HSImpl (\[a] -> return $ withPrettyError . castToChar $ a))),
+      ("bool", (Valence 1, HSImpl (\[a] -> return $ withPrettyError . castToBool $ a))),
+      ("string", (Valence 1, HSImpl (\[a] -> return $ VList $ VChar <$> T.unpack (asText a)))),
       ( "counts",
         ( Valence 1,
-          mkHSImpl
+          HSImpl
             ( \[VList as] ->
-                VList
-                  . fmap (\(a, b) -> VList [a, b])
-                  . fmap (second VInteger)
-                  . M.toList
-                  . M.fromListWith (+)
-                  $ [(a, 1) | a <- as]
+                return $
+                  VList
+                    . fmap (\(a, b) -> VList [a, b])
+                    . fmap (second VInteger)
+                    . M.toList
+                    . M.fromListWith (+)
+                    $ [(a, 1) | a <- as]
             )
         )
       ),
       ( "bits",
         ( Valence 1,
-          mkHSImpl
-            ( \[VList as] -> VInteger $ sum [2 ^ i | (i, b) <- zip [0 ..] (reverse as), truthy b]
+          HSImpl
+            ( \[VList as] -> return $ VInteger $ sum [2 ^ i | (i, b) <- zip [0 ..] (reverse as), truthy b]
             )
         )
       ),
       ( "read",
         ( Valence 1,
-          mkHSImplIO
+          HSImpl
             ( \[a] -> do
-                t <- readFile (T.unpack $ asText a)
+                t <- liftIO $ readFile (T.unpack $ asText a)
                 return (VList $ VChar <$> t)
             )
         )
       ),
       ( "input",
         ( Valence 0,
-          mkHSImplIO
+          HSImpl
             ( \_ -> do
-                t <- T.unpack <$> getLine
+                t <- liftIO $ T.unpack <$> getLine
                 return (VList $ VChar <$> t)
             )
         )
