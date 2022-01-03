@@ -62,15 +62,20 @@ runClauses (c : cs) = do
     go vIO [] = return $ Right vIO
     go vIO (c : cs) = do
       v <- liftIO vIO
-      apE <- apply v c
+      -- TODO: Not clear that this E.try is actually going to catch anything
+      apE' <- apply v c
+      apE <- liftIO $ (E.try (pure apE') :: IO (Either SomeException (Either CrossbowError Value)))
       case apE of
-        Left e -> return $ Left e
-        Right v' -> do
-          -- TODO: Can we do away with this deepEval? Doesn't apply handle it?
-          deepVE <- deepEval v'
-          case deepVE of
+        Left e -> return $ Left $ InternalError (show e)
+        Right vE ->
+          case vE of
             Left e -> return $ Left e
-            Right deepV -> go (return deepV) cs
+            Right v' -> do
+              -- TODO: Can we do away with this deepEval? Doesn't apply handle it?
+              deepVE <- deepEval v'
+              case deepVE of
+                Left e -> return $ Left e
+                Right deepV -> go (return deepV) cs
 
 -- Build a vFunction that will take arguments, substitute, and then run clauses
 -- Does so by creating a hashed name for this lambda and storing it with our program context
@@ -186,6 +191,7 @@ evalF vf@(VFunction (Function name args)) = do
             case impl of
               HSImpl hsF -> runHSImpl hsF args
               CBImpl cbF -> runCBImpl cbF args
+              ConstImpl constV -> return $ Right constV
           | length args > v -> return $ Left (TooManyArgumentsError name v (length args))
           | otherwise -> return $ Right vf
 evalF v = return $ Right v
@@ -485,6 +491,19 @@ builtins =
             ( \_ -> do
                 t <- liftIO $ T.unpack <$> getLine
                 return (VList $ VChar <$> t)
+            )
+        )
+      ),
+      -- TODO: unhardcode valence 0
+      ( "bind",
+        ( Valence 2,
+          HSImpl
+            ( \[VList cs, v] -> do
+                let unchar (VChar c) = c
+                    k = T.pack $ unchar <$> cs
+                ProgramContext pp builtins <- get
+                put (ProgramContext pp (M.insert k (Valence 0, ConstImpl v) builtins))
+                return v
             )
         )
       )

@@ -61,6 +61,7 @@ value =
   ignoreSpaces $
     firstOf
       [ vBool,
+        binding,
         vRange,
         vNumber,
         inParens value,
@@ -166,13 +167,23 @@ mapWrap :: Int -> Function -> Function
 mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])
 
+name :: P Text
+name = T.pack <$> many1 (noneOf "!{}[]()|_ \t\n,\"\'")
+
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins
 function :: (P Function)
 function = do
-  let disallowedChars = "!{}[]()|_ \t\n,\"\'"
   ignoreSpaces $ do
     -- We parse in favour of longer names first to avoid max/maximum clashes
-    fName <- many1 (noneOf disallowedChars)
+    fName <- name
     mapBangs <- many (char '!')
-    return (mapWrap (length mapBangs) (Function (T.pack fName) []))
+    return (mapWrap (length mapBangs) (Function fName []))
+
+-- TODO: Shit, binding needs a valence
+binding :: P Value
+binding = do
+  n <- name
+  ignoreSpaces (string "<-")
+  v <- value
+  return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n, v])

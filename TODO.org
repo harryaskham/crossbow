@@ -1,16 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
-  - [-] Deep Hole
-    - [ ] filter appears broken
-    - [ ] reenable mapwrap
-    - [X] reenable lambdas
-    - [ ] mapbangs probably do need to be lifted earlier
-    - [ ] reintroduce try around apply
-    - [X] runclauses full application not working
-  - [X] Reader -> State, allowing builtins to change with execution
-  - [ ] Bind function with aliases (how to parse identities?)
-  - [X] HSImpl -> wrap with State
+  - [ ] Bind function with aliases - remove need for Valence in the map (move Valence to HSImpl)
   - [ ] rename builtins to namespace
   - [ ] runFile: in Main, calling on a multiline program parser in Parser which can parse nested Programs in {}
     - Print all values, where the last value is the return type
@@ -24,14 +15,9 @@
       - [ ] fromRight' (on e.g. Text.Read)
       - [ ] withPrettyError
       - [X] unsafePerformIO
-    - [ ] Exhausive Instances (Semigroup)
-    - [ ] Remove partiality for builtins - OpImpl returns Either
-      - Move to a new module
-      - Give each its own line
-      - Each then gets enough space to error out on a bad valence match
-      - Can also handle errors more nicely inside
-    - [ ] Finally take out all compiler warnings
-      - Remove partiality in functions and handle appropriately
+      - [ ] inexhausive Instances (Semigroup)
+      - [ ] OpImpl partiality
+      - [ ] Finally take out all compiler warnings
 - Language features
   - [ ] variadic, inverse function of monadic
     - Give Valence a Variadic member where we just strictly apply until we have a value
@@ -49,6 +35,8 @@
   - [ ] Stack trace
   - [ ] range syntax with variable endpoints
     - for now use range function
+  - [X] Reader -> State, allowing builtins to change with execution
+  - [X] HSImpl -> wrap with State
   - [X] mapbang for lambdas
     - [X] Num, Semigroup etc classes must error; catch these errors instead as InternalErrors
     - [X] Exhaustive Num

@@ -273,6 +273,7 @@ newtype Valence = Valence Int deriving (Show, Eq)
 data OpImpl
   = HSImpl ([Value] -> Eval Value)
   | CBImpl Text
+  | ConstImpl Value
 
 data BindDir = BindFromLeft | BindFromRight
 
