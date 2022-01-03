@@ -384,8 +384,8 @@ builtins =
             )
         )
       ),
-      ("foldl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (foldl $0)}")),
-      ("scanl1", (Valence 2, CBImpl "{$1|fork 2|[head, tail]|monadic (scanl $0)}")),
+      ("foldl1", (Valence 2, CBImpl "{foldl $0 (head $1) (tail $1)}")),
+      ("scanl1", (Valence 2, CBImpl "{scanl $0 (head $1) (tail $1)}")),
       ("fold", (Valence 3, CBImpl "foldl")),
       ("scan", (Valence 3, CBImpl "scanl")),
       ("transpose", (Valence 1, HSImpl (\[VList as] -> return $ let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as)))),

@@ -11,7 +11,7 @@ assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
   let programContext = ProgramContext program builtins
-  pE <- runReaderT (compile source) programContext
+  pE <- evalStateT (compile source) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
     Right vIO -> do
@@ -51,6 +51,8 @@ main = do
   assertEvaluatesTo "map forward over list" "[1,2,3] | map (+ 1)" (VList $ VInteger <$> [2, 3, 4])
   assertEvaluatesTo "fold over empty list" "foldl | + | 0 | []" (VInteger 0)
   assertEvaluatesTo "fold over list" "foldl | + | 0 | [1,2,3]" (VInteger 6)
+  assertEvaluatesTo "foldl1" "foldl1 (+) [1,2,3]" (VInteger 6)
+  assertEvaluatesTo "scanl1" "scanl1 (+) [1,2,3]" (VList $ VInteger <$> [1, 3, 6])
   assertEvaluatesTo "ranges" "1:100|sum" (VInteger 5050)
   assertEvaluatesTo "maximum" "[1,3,2]|maximum" (VInteger 3)
   assertEvaluatesTo "minimum" "[1,3,2]|minimum" (VInteger 1)
@@ -81,8 +83,6 @@ main = do
   assertEvaluatesTo "lengthy" "lengthy 3 1:3" (VBool True)
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
-  assertEvaluatesTo "foldl1" "[1,2,3]|foldl1|+" (VInteger 6)
-  assertEvaluatesTo "scanl1" "[1,2,3]|scanl1|+" (VList $ VInteger <$> [1, 3, 6])
   assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
   -- TODO: Fix this: assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
   -- TODO: Mapbang lambdas
