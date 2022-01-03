@@ -20,7 +20,7 @@ import Text.Parsec (parserTrace)
 import Text.ParserCombinators.Parsec (ParseError, parse, parseTest)
 
 debugParser :: Bool
-debugParser = False
+debugParser = True
 
 parseProgram :: Text -> Eval (Either ParseError [IO Value])
 parseProgram t = do
@@ -77,14 +77,14 @@ apply :: Value -> Value -> Eval (Either CrossbowError Value)
 -- If we have a function in program state, apply to the right
 apply (VFunction f) v = applyF f v BindFromRight
 -- If we have a value in program state and encounter a function, apply it
-apply v (VFunction f) = applyF f v BindFromLeft
+apply v (VFunction f) = applyF f v BindFromRight
 -- Application of lists tries to ziplist
 apply (VList as@((VFunction _) : _)) (VList bs) =
   do
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromLeft
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromRight
     case partitionEithers (getZipList rs) of
       ([], rs) -> return $ Right $ VList rs
       (es, _) -> return $ Left $ ApplyError es
@@ -94,7 +94,7 @@ apply (VList bs) (VList as@((VFunction _) : _)) =
     let unwrap (VFunction f) = f
         fs = ZipList (unwrap <$> as)
         bz = ZipList bs
-    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromRight
+    rs <- sequence $ applyF <$> fs <*> bz <*> pure BindFromLeft
     case partitionEithers (getZipList rs) of
       ([], rs) -> return $ Right $ VList rs
       (es, _) -> return $ Left $ ApplyError es
@@ -127,7 +127,12 @@ runCBImpl cbF args = do
     Right fIO -> do
       f <- liftIO fIO
       result <- foldM (\acc x -> withPrettyError <$> apply acc x) f args
-      return $ Right result
+      deepEval result
+
+runHSImpl :: ([Value] -> Eval Value) -> [Value] -> Eval (Either CrossbowError Value)
+runHSImpl hsF args = do
+  result <- hsF args
+  deepEval result
 
 evalF :: Value -> Eval (Either CrossbowError Value)
 evalF vf@(VFunction (Function name args)) = do
@@ -138,7 +143,7 @@ evalF vf@(VFunction (Function name args)) = do
       if
           | length args == v ->
             case impl of
-              HSImpl hsF -> Right <$> hsF args
+              HSImpl hsF -> runHSImpl hsF args
               CBImpl cbF -> runCBImpl cbF args
           | length args > v -> return $ Left (TooManyArgumentsError name v (length args))
           | otherwise -> return $ Right vf
