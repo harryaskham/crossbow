@@ -527,8 +527,7 @@ builtins =
                     k = T.pack $ unchar <$> cs
                 ProgramContext pp builtins <- get
                 put (ProgramContext pp (M.insert k (ConstImpl v) builtins))
-                -- TODO: Return Null or something
-                return . Right $ v
+                return $ Right VNull
             )
       )
     ]

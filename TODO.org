@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Just added VNull - add Applicaiton rules so that Null is overridden by anythingelse
   - [ ] Bind function with aliases - remove need for Valence in the map (move Valence to HSImpl)
   - [ ] rename builtins to namespace
   - [ ] runFile: in Main, calling on a multiline program parser in Parser which can parse nested Programs in {}
