@@ -10,7 +10,10 @@ import System.Console.Haskeline
 main :: IO ()
 main = runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True}) loop
   where
-    programParser = runReader program builtins
+    -- TODO: Perhaps programParser is a function that always takes the builtins
+    -- Or better, we always have State
+    programParser = evalState program builtins
+    -- TODO: Yep, run the below with StateT
     loop = do
       inputM <- getInputLine "|-> "
       case inputM of

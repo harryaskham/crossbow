@@ -1,10 +1,16 @@
 #+TITLE: TODO
 
 - Do Next
-  - bind fn with -> and flipped aliases, reader to state, adds to builtins, all fns impls run inside State, program can be multiline and builds ip contrxt, runs values, runFile fn, move aoc sols to file, tests load file instead, repl/file mode, bind is just a fn and can run inline, ident parser without $
-  - [X] 'apply' should be an Either, which will bubble up far
-    - Introduce more withPrettyError at first
-    - We'll take these out in a second step
+  - [ ] Reader -> State, allowing builtins to change with execution
+  - [ ] Bind function with aliases (how to parse identities?)
+  - [ ] HSImpl -> wrap with State
+  - [ ] runFile: in Main, calling on a multiline program parser in Parser which can parse nested Programs in {}
+    - Print all values, where the last value is the return type
+  - [ ] Lib is dynamically loaded with a default value
+  - [ ] Move AOC solutions to an external file
+  - [ ] Tests for AOC use runFile
+  - [ ] REPL / file mode depending on flags
+  - [ ] REPL also runs in context via e.g. StateT
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight' (on e.g. Text.Read)

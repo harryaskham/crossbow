@@ -59,7 +59,7 @@ import Prelude hiding (optional)
 
 type ParseContext = Builtins
 
-type ValueParser = Reader ParseContext (P (IO Value))
+type ValueParser = State ParseContext (P (IO Value))
 
 -- Parse one of the things given, backtracking on failure
 firstOf :: [P a] -> P a
@@ -71,18 +71,18 @@ ignoreSpaces p = spaces *> p <* spaces
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
-clauses :: Reader ParseContext ProgramParser
+clauses :: State ParseContext ProgramParser
 clauses = do
   value' <- value
   return $ value' `sepBy` clauseDivider
 
-program :: Reader ParseContext ProgramParser
+program :: State ParseContext ProgramParser
 program = clauses
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
 
-value :: Reader ParseContext (P (IO Value))
+value :: State ParseContext (P (IO Value))
 value =
   firstOf
     <$> sequence
@@ -145,7 +145,7 @@ value =
           VInteger a <- withPrettyError . castToInt <$> aIO
           VInteger b <- withPrettyError . castToInt <$> bIO
           return $ VList (VInteger <$> [a .. b])
-    arg :: Reader ParseContext (P (IO Argument))
+    arg :: State ParseContext (P (IO Argument))
     arg = do
       value' <- value
       return $ ignoreSpaces ((Bound <$$> value') <|> char '_' $> return Unbound)
@@ -181,11 +181,12 @@ value =
     -- Finally, a func with no arguments
     vFunc :: ValueParser
     vFunc = do
-      pc <- ask
       operator' <- operator
+      pc <- get
       return do
         (op, mapDepth) <- operator'
-        let f = runReader (mkFunc op mapDepth) pc
+        -- NOTE: safe not to update PC here because mkFunc only reads from builtins
+        let f = evalState (mkFunc op mapDepth) pc
         return . return $ VFunction f
     vFunction :: ValueParser
     vFunction =
@@ -246,22 +247,22 @@ maxArgIx (VFunction f@Function {}) =
     ixs -> Just $ L.maximum ixs
 maxArgIx _ = Nothing
 
-mapWrap :: Int -> Function -> Reader ParseContext Function
+mapWrap :: Int -> Function -> State ParseContext Function
 mapWrap 0 f = return f
 mapWrap n f = do
-  builtins <- ask
+  builtins <- get
   let (valence, mapImpl) = builtins M.! "map"
   mapWrap (n - 1) (Function (Just "map") valence mapImpl [Bound (VFunction f), Unbound])
 
-mkFunc :: Operator -> Int -> Reader ParseContext Function
+mkFunc :: Operator -> Int -> State ParseContext Function
 mkFunc (Operator (OpType t) (Valence v)) mapDepth = do
-  builtins <- ask
+  builtins <- get
   let (valence, impl) = builtins M.! t
   mapWrap mapDepth $ Function (Just t) valence impl (replicate v Unbound)
 
-operator :: Reader ParseContext (P (Operator, Int))
+operator :: State ParseContext (P (Operator, Int))
 operator = do
-  builtins <- ask
+  builtins <- get
   return $
     ignoreSpaces $ do
       -- We parse in favour of longer names first to avoid max/maximum clashes
