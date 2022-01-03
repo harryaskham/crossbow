@@ -244,8 +244,8 @@ builtins =
       (":", (Valence 2, HSImpl (\[a, b] -> return $ vCons a b))),
       ("min", (Valence 2, HSImpl (\[a, b] -> return $ min a b))),
       ("max", (Valence 2, HSImpl (\[a, b] -> return $ max a b))),
-      ("minOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic <= |if _ $1 $2}")),
-      ("maxOn", (Valence 3, CBImpl "{map $0 [$1,$2]| monadic > |if _ $1 $2}")),
+      ("minOn", (Valence 3, CBImpl "{map $0 [$1, $2]|monadic <= |if|$1|$2}")),
+      ("maxOn", (Valence 3, CBImpl "{map $0 [$1, $2]|monadic > |if|$1|$2}")),
       -- TODO: Redefine all the below using crossbow folds, maps, filters
       ("id", (Valence 1, HSImpl (\[a] -> return a))),
       ("const", (Valence 2, HSImpl (\[a, _] -> return a))),
