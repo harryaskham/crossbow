@@ -41,8 +41,11 @@ type ParseContext = Builtins
 firstOf :: [P a] -> P a
 firstOf = foldl1 (<|>) . fmap try
 
+nonNewlineSpaces :: P String
+nonNewlineSpaces = many (oneOf " \t")
+
 ignoreSpaces :: P a -> P a
-ignoreSpaces p = spaces *> p <* spaces
+ignoreSpaces p = nonNewlineSpaces *> p <* nonNewlineSpaces
 
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
@@ -51,7 +54,7 @@ clauses :: P [Value]
 clauses = value `sepBy1` clauseDivider
 
 program :: P [[Value]]
-program = clauses `sepBy1` spaces
+program = many (clauses <* many (oneOf "\n\r"))
 
 inParens :: P a -> P a
 inParens = between (char '(') (char ')')
@@ -122,8 +125,7 @@ value =
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: P Value
     vFuncL = do
-      (VFunction (Function name _)) <- vFunc
-      spaces
+      (VFunction (Function name _)) <- ignoreSpaces vFunc
       args <- many1 value
       return (VFunction (Function name args))
     -- Finally, a func with no arguments
