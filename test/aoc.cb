@@ -1,17 +1,16 @@
 # Day 1
-d1 <- (aoc 1 | ints)
-d1 | pairs | count (monadic <)
-d1 | windows 3 | sum! | pairs | count (monadic <)
+aoc 1 | ints | pairs | count `<
+aoc 1 | ints | windows 3 | sum! | pairs | count `<
 
 # Day 2
-d2p <- {case (ix 0 $0) [['u', negate [0, ix 1 $0]], ['d', [0, ix 1 $0]], ['f', [ix 1 $0, 0]]]}
-d2 <- (aoc 2 | lines | map {words | second int | first fst} | map d2p)
-d2 | sum | monadic *
-d2 | fold {$0 | first (+ (fst $1)) | second (+ (* (fst $1) (thd $0))) | third (+ (snd $1))} [0, 0, 0] | take 2 | monadic *
+sub <- {case (head $0) [['u', negate [0, ix 1 $0]], ['d', [0, ix 1 $0]], ['f', [ix 1 $0, 0]]]}
+d2 <- (aoc 2 | lines | {words | second int | first fst}! | sub!)
+d2 | sum | `*
+d2 | fold {$0|[+ (fst $1),+ (* (fst $1) (thd $0)),+(snd $1)]} [0, 0, 0] | take 2 | `*
 
 # Day 3
 d3 <- (aoc 3 | lines | int!!)
-d3 | transpose | fork 2 | [mode!, antimode!] | bits! | monadic *
+d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 #mlcb <- {$0 | transpose | map (ix $1) | fork 2 | [mode!, antimode!]}
 #d3step <- {$0 | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!}
 #d3step d3

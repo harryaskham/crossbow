@@ -75,13 +75,13 @@ main = do
   assertEvaluatesTo "filter forward" "8:12 | filter (> 10)" (VList $ VInteger <$> [8, 9])
   assertEvaluatesTo
     "pairwise sums"
-    "1:4 | fork 2 | [id, drop 1] | monadic zip | map sum"
+    "1:4 | fork 2 | [id, drop 1] | `zip | sum!"
     (VList $ VInteger <$> [3, 5, 7])
   assertEvaluatesTo "list length" "length [1,2,3,4]" (VInteger 4)
   assertEvaluatesTo "empty list length" "length []" (VInteger 0)
   assertEvaluatesTo "scanl" "scanl (+) 0 [1,2,3]" (VList $ VInteger <$> [0, 1, 3, 6])
   assertEvaluatesTo "scanr" "scanr (+) 0 [1,2,3]" (VList $ VInteger <$> [6, 5, 3, 0])
-  assertEvaluatesTo "fork and ap" "6 | fork 2 | [+,+ 1] | monadic ap" (VInteger 13)
+  assertEvaluatesTo "fork and ap with monadic backtick" "6 | fork 2 | [+,+ 1] | `ap" (VInteger 13)
   assertEvaluatesTo "fork and flap" "6 | fork 2 | [+ 1, +] | monadic (flip ap)" (VInteger 13)
   assertEvaluatesTo "not true" "not True" (VBool False)
   assertEvaluatesTo "evens" "1:10|filter even" (VList $ VInteger <$> [2, 4, 6, 8, 10])
@@ -95,7 +95,7 @@ main = do
   assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
   assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {foldl1 (+) $0}!!" (VList [VList [VInteger 6]])
 
-  assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d1 | pairs | count (monadic <)" (VInteger 1316)
+  assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 
   assertFileEvaluatesTo "test/file_test.cb" [VInteger 3]
 

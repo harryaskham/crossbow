@@ -27,6 +27,7 @@ import Text.ParserCombinators.Parsec
     many1,
     noneOf,
     oneOf,
+    optionMaybe,
     sepBy,
     sepBy1,
     spaces,
@@ -182,15 +183,20 @@ mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (VFunction (Function "map" [f]))
 
 name :: P Text
-name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#")
+name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#`")
 
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins
+-- A backtick will wrap it in monadic
 function :: (P Function)
 function = do
   ignoreSpaces $ do
+    monadic <- optionMaybe $ char '`'
     fName <- name
-    return (Function fName [])
+    let f = Function fName []
+    return $ case monadic of
+      Nothing -> f
+      Just _ -> Function "monadic" [VFunction f]
 
 binding :: P Value
 binding = do
