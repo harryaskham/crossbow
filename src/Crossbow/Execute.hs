@@ -23,9 +23,11 @@ settings =
 
 repl :: IO ()
 repl = do
+  prefs <- readPrefs ".haskeline"
   _ <-
+    -- TODO: Figure out overriding prefs here
     flip evalStateT programContext
-      . runInputT settings
+      . runInputTWithPrefs prefs settings
       $ loop
   print "Exiting"
   where
