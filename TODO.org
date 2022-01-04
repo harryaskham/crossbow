@@ -1,13 +1,13 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] import function that takes a path and runs it in the context
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
     - Still breakages with lambda evaluation
   - [ ] PrettyTruncated class
   - [ ] rename builtins to namespace
   - [ ] Lib is dynamically loaded with a default value
+    - or is this too slow?
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight' (on e.g. Text.Read)
@@ -16,6 +16,7 @@
       - [ ] inexhausive Instances (Semigroup)
       - [ ] OpImpl partiality
       - [ ] Finally take out all compiler warnings
+  - [X] import function that takes a path and runs it in the context
   - [X] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
   - [X] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
   - [X] File format with spaces separation is ambiguous
@@ -24,8 +25,8 @@
     - Kind of working, just needs m
   - [X] Tests for AOC use runFile
 - Language features
-  - [ ] variadic, inverse function of monadic
-    - Give Valence a Variadic member where we just strictly apply until we have a value
+  - [ ] proper function definition w/ named args
+    - should be okay to lean on substitution mechanism if Function stores the names to sub in order
   - [ ] emacs mode
   - [ ] lean into the lispiness; its also a lisp
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
