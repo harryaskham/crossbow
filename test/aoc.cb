@@ -13,5 +13,6 @@ d2 | fold {$0 | first (+ (fst $1)) | second (+ (* (fst $1) (thd $0))) | third (+
 # Day 3
 d3 <- (aoc 3 | lines | int!!)
 d3 | transpose | fork 2 | [mode!, antimode!] | bits! | monadic *
+#mlcb <- {$0 | transpose | map (ix $1) | fork 2 | [mode!, antimode!]}
 #d3step <- {$0 | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!}
 #d3step d3
