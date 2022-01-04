@@ -1,8 +1,7 @@
 # Day 1
 d1 <- (aoc 1 | ints)
 d1 | pairs | count (monadic <)
-# disabled due to windows slowness
-# d1 | windows 3 | sum! | pairs | count (monadic <)
+d1 | windows 3 | sum! | pairs | count (monadic <)
 
 # Day 2
 d2p <- {case (ix 0 $0) [['u', negate [0, ix 1 $0]], ['d', [0, ix 1 $0]], ['f', [ix 1 $0, 0]]]}

@@ -350,6 +350,7 @@ builtins =
       ("take", wrapImpl 2 $ HSImpl (\[VInteger n, VList as] -> return . Right $ VList (take (fromIntegral n) as))),
       ("head", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ L.head as)),
       ("tail", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ VList $ L.tail as)),
+      ("tails", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ VList $ VList <$> L.tails as)),
       -- TODO: Make zip variadic
       ("zip", wrapImpl 2 $ HSImpl (\[VList as, VList bs] -> return . Right $ VList ((\(a, b) -> VList [a, b]) <$> zip as bs))),
       ("zip3", wrapImpl 3 $ HSImpl (\[VList as, VList bs, VList cs] -> return . Right $ VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs))),
@@ -357,7 +358,7 @@ builtins =
       ("square", CBImpl "{fork (length $0) $0}"),
       ("enum", CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}"),
       ("lengthy", CBImpl "{$1|length|(== $0)}"),
-      ("windows", CBImpl "{foldl {$0|second (: (take $1 (fst $0)))|first (drop 1)} [$1,[]] (fork (- (+ 1 (length $1)) $0) $0) | snd | reverse}"),
+      ("windows", CBImpl "{$1|tails|take $0|transpose|take ((1 + length $1) - $0)}"),
       ( "nap",
         wrapImpl 3 $
           HSImpl

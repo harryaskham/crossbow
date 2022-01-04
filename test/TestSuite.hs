@@ -102,7 +102,7 @@ main = do
   assertFileEvaluatesTo
     "test/aoc.cb"
     [ VInteger 1316,
-      -- VInteger 1344,
+      VInteger 1344,
       VInteger 1690020,
       VInteger 1408487760,
       VInteger 3320834
