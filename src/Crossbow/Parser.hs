@@ -134,12 +134,17 @@ value =
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: P Value
     vFuncL = do
-      (VFunction (Function name _)) <- ignoreSpaces vFunc
+      f <- ignoreSpaces function
+      mapBangs <- many (char '!')
       args <- many1 value
-      return (VFunction (Function name args))
+      let (Function mName mArgs) = mapWrap (length mapBangs) f
+      return $ VFunction (Function mName (mArgs ++ args))
     -- Finally, a func with no arguments
     vFunc :: P Value
-    vFunc = VFunction <$> function
+    vFunc = do
+      f <- ignoreSpaces function
+      mapBangs <- many (char '!')
+      return $ VFunction (mapWrap (length mapBangs) f)
     vFunction :: P Value
     vFunction =
       firstOf
@@ -185,10 +190,8 @@ name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#")
 function :: (P Function)
 function = do
   ignoreSpaces $ do
-    -- We parse in favour of longer names first to avoid max/maximum clashes
     fName <- name
-    mapBangs <- many (char '!')
-    return (mapWrap (length mapBangs) (Function fName []))
+    return (Function fName [])
 
 binding :: P Value
 binding = do
