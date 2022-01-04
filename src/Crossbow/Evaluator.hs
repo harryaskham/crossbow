@@ -263,6 +263,7 @@ substituteArgs _ v = v
 
 -- Deeply evaluate the given value.
 -- Ensure if this is a function that all arguments are strictly evaluated.
+-- If deeply evaluating a function returns another function, we deep-eval that as well
 deepEval :: Value -> Eval (Either CrossbowError Value)
 deepEval (VFunction f@(Function name args)) =
   do
@@ -270,11 +271,23 @@ deepEval (VFunction f@(Function name args)) =
     (errors, argsStrict) <- partitionEithers <$> traverse deepEval args
     if not (null errors)
       then return . Left $ L.head errors
-      else evalF (VFunction (Function name argsStrict))
+      else do
+        vE <- evalF (VFunction (Function name argsStrict))
+        case vE of
+          Left e -> return $ Left e
+          Right vf@(VFunction (Function name' _)) ->
+            if name == name'
+              then return $ Right vf
+              else deepEval vf
+          Right v -> return $ Right v
 deepEval (VList as) = do
   as <- traverse deepEval as
   return . fmap VList $ sequence as
-deepEval l@(VLambda _) = compileLambda l
+deepEval l@(VLambda _) = do
+  fE <- compileLambda l
+  case fE of
+    Left e -> return $ Left e
+    Right f -> deepEval f
 deepEval v = return $ Right v
 
 -- Coerce lambas into functions for the builtins

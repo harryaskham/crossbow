@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
   - [ ] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
   - [ ] File format with spaces separation is ambiguous
     - Could fix with value parens

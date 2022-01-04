@@ -85,6 +85,8 @@ main = do
   assertEvaluatesTo "not true" "not True" (VBool False)
   assertEvaluatesTo "evens" "1:10|filter even" (VList $ VInteger <$> [2, 4, 6, 8, 10])
   assertEvaluatesTo "multivariable lambda" "{$0|(+ $1)|(* $2)}|1|2|3" (VInteger 9)
+  assertEvaluatesTo "zero argument lambdas" "(1 | + 2) | * 3" (VInteger 9)
+
   assertEvaluatesTo "enumeration" "enum 1:3" (VList [VList [VInteger 0, VInteger 1], VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "lengthy" "lengthy 3 1:3" (VBool True)
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
