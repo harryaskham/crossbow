@@ -27,6 +27,11 @@ debugParser = False
 debugEvaluation :: Bool
 debugEvaluation = False
 
+runFile :: FilePath -> Eval (Either CrossbowError [Value])
+runFile path = do
+  t <- T.pack <$> readFile path
+  compilePrinted t
+
 parseProgram :: Text -> Eval (Either ParseError [[Value]])
 parseProgram t = do
   programParser <- gets _programParser
@@ -579,6 +584,18 @@ builtins =
                 ProgramContext pp builtins <- get
                 put (ProgramContext pp (M.insert k (ConstImpl v) builtins))
                 return $ Right VNull
+            )
+      ),
+      ( "import",
+        wrapImpl 1 $
+          HSImpl
+            ( \[path] -> do
+                let path' = T.unpack $ asText path
+                vE <- runFile path'
+                case vE of
+                  Left e -> return $ Left e
+                  -- TODO: Could actually use the imported values here
+                  Right _ -> return $ Right VNull
             )
       )
     ]

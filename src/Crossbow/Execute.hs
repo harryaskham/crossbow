@@ -7,12 +7,6 @@ import Crossbow.Types
 import Data.Text qualified as T
 import System.Console.Haskeline
 
-runFile :: FilePath -> IO (Either CrossbowError [Value])
-runFile path = do
-  t <- T.pack <$> readFile path
-  let pc = ProgramContext program builtins
-  evalStateT (compilePrinted t) pc
-
 repl :: IO ()
 repl = do
   _ <-

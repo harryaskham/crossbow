@@ -1,15 +1,10 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
-  - [ ] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
-  - [ ] File format with spaces separation is ambiguous
-    - Could fix with value parens
+  - [ ] import function that takes a path and runs it in the context
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
-  - [ ] Move AOC solutions to an external file
-    - Kind of working, just needs m
-  - [ ] Tests for AOC use runFile
+    - Still breakages with lambda evaluation
   - [ ] PrettyTruncated class
   - [ ] rename builtins to namespace
   - [ ] Lib is dynamically loaded with a default value
@@ -21,6 +16,13 @@
       - [ ] inexhausive Instances (Semigroup)
       - [ ] OpImpl partiality
       - [ ] Finally take out all compiler warnings
+  - [X] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
+  - [X] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
+  - [X] File format with spaces separation is ambiguous
+    - Could fix with value parens
+  - [X] Move AOC solutions to an external file
+    - Kind of working, just needs m
+  - [X] Tests for AOC use runFile
 - Language features
   - [ ] variadic, inverse function of monadic
     - Give Valence a Variadic member where we just strictly apply until we have a value
