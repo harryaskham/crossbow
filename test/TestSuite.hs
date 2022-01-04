@@ -108,11 +108,6 @@ main = do
     (VInteger 1344)
 
   assertEvaluatesTo
-    "Day 1 (Both Parts)"
-    "aoc 1 | ints | fork 2 | second { windows 3 | sum! } | map { pairs | count (monadic <) }"
-    (VList [VInteger 1316, VInteger 1344])
-
-  assertEvaluatesTo
     "Day 2 (Part 1)"
     "aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | sum | monadic *"
     (VInteger 1690020)

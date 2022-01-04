@@ -40,29 +40,38 @@ debugParseProgram t = do
     parseTest programParser (T.unpack t)
     print "Parse test complete"
 
-compile :: Text -> Eval (Either CrossbowError [Value])
-compile t = do
+compileInternal :: Bool -> Text -> Eval (Either CrossbowError [Value])
+compileInternal doPrint t = do
   when debugParser (debugParseProgram t)
   pE <- parseProgram t
   case pE of
     Left e -> return $ Left (UncaughtParseError e)
-    Right css -> runProgram css
+    Right css -> runProgram doPrint css
+
+compile :: Text -> Eval (Either CrossbowError [Value])
+compile = compileInternal False
+
+compilePrinted :: Text -> Eval (Either CrossbowError [Value])
+compilePrinted = compileInternal True
 
 compileUnsafe :: Text -> Eval [Value]
 compileUnsafe t = do
   pE <- compile t
   return $ withPrettyError pE
 
-runProgram :: [[Value]] -> Eval (Either CrossbowError [Value])
-runProgram css = go css []
+runProgram :: Bool -> [[Value]] -> Eval (Either CrossbowError [Value])
+runProgram doPrint css = go css []
   where
     go [] vs = return $ Right (reverse vs)
     go (cs : css) vs = do
       vE <- runClauses cs
       case vE of
         Left e -> do
+          when doPrint $ liftIO $ putTextLn (pretty e)
           return $ Left e
-        Right v -> go css (v : vs)
+        Right v -> do
+          when doPrint $ putTextLn (pretty v)
+          go css (v : vs)
 
 runClauses :: [Value] -> Eval (Either CrossbowError Value)
 runClauses [] = return (Left EmptyProgramError)

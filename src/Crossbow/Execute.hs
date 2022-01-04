@@ -11,15 +11,7 @@ runFile :: FilePath -> IO (Either CrossbowError [Value])
 runFile path = do
   t <- T.pack <$> readFile path
   let pc = ProgramContext program builtins
-  flip evalStateT pc do
-    vsE <- compile t
-    case vsE of
-      Left e -> do
-        liftIO $ putTextLn (pretty e)
-        return $ Left e
-      Right vs -> do
-        liftIO $ putTextLn $ T.intercalate "\n" (pretty <$> vs)
-        return $ Right vs
+  evalStateT (compilePrinted t) pc
 
 repl :: IO ()
 repl = do
