@@ -80,7 +80,6 @@ runProgram doPrint css = go css []
 
 runClauses :: [Value] -> Eval (Either CrossbowError Value)
 runClauses [] = return (Left EmptyProgramError)
--- We might first start with a fully bound clause, so ensure that one is deeply eval'd before moving on
 runClauses (c : cs) = do
   cDeepE <- deepEval c
   case cDeepE of
@@ -133,7 +132,8 @@ compileLambda lambda@(VLambda clauses) =
         impl =
           HSImpl
             ( \args -> do
-                when debugEvaluation $ liftIO (print $ "Inside lambda " <> lambdaName <> " with args: " <> (T.intercalate "," (pretty <$> args)))
+                when debugEvaluation $
+                  liftIO (print $ "Inside lambda " <> lambdaName <> " with args: " <> pretty args)
                 if length args /= nArgs
                   then return $ Left $ ValenceError (length args) nArgs
                   else do
@@ -212,7 +212,7 @@ isIdentifier _ = False
 
 runCBImpl :: Text -> [Value] -> Eval (Either CrossbowError Value)
 runCBImpl cbF args = do
-  when debugEvaluation (print $ "Running CBImpl with args: " <> cbF <> ", " <> (T.intercalate "," $ pretty <$> args))
+  when debugEvaluation (print $ "Running CBImpl with args: " <> cbF <> ", " <> pretty args)
   pE <- compile cbF
   case pE of
     Left e -> return $ Left e
@@ -223,7 +223,7 @@ runCBImpl cbF args = do
 
 runHSImpl :: ([Value] -> Eval (Either CrossbowError Value)) -> [Value] -> Eval (Either CrossbowError Value)
 runHSImpl hsF args = do
-  when debugEvaluation (print $ "Running HSImpl with args: " <> (T.intercalate "," $ pretty <$> args))
+  when debugEvaluation (print $ "Running HSImpl with args: " <> pretty args)
   resultE <- hsF args
   case resultE of
     Left e -> return $ Left e

@@ -3,6 +3,7 @@ module Crossbow.Types where
 import Crossbow.Util
 import Data.Char
 import Data.Either.Extra (fromRight')
+import Data.List qualified as L
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.Read qualified as TR
@@ -310,11 +311,14 @@ instance Pretty Value where
   pretty (VBool a) = show a
   pretty s@(VList a)
     | isString s && (not (null a)) = "\"" <> (T.pack $ (\(VChar c) -> c) <$> a) <> "\""
-    | otherwise = "[" <> T.intercalate "," (pretty <$> a) <> "]"
+    | otherwise = pretty a
   pretty (VFunction f) = pretty f
   pretty (VLambda cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
   pretty VNull = ""
 
 instance Pretty Function where
-  pretty (Function name args) = "(" <> name <> " [" <> T.intercalate "," (pretty <$> args) <> "])"
+  pretty (Function name args) = "(" <> name <> " " <> pretty args
+
+instance Pretty a => Pretty [a] where
+  pretty as = "[" <> T.intercalate ", " (pretty <$> as) <> "]"
