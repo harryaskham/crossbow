@@ -4,14 +4,28 @@ import Control.Exception
 import Crossbow.Evaluator
 import Crossbow.Parser
 import Crossbow.Types
+import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import System.Console.Haskeline
+
+searchFunc :: String -> Eval [Completion]
+searchFunc str = do
+  builtins <- gets _builtins
+  return $ simpleCompletion <$> filter (str `isPrefixOf`) (T.unpack <$> M.keys builtins)
+
+settings :: Settings Eval
+settings =
+  Settings
+    { historyFile = Just ".crossbow_history",
+      complete = completeWord Nothing " \t" searchFunc,
+      autoAddHistory = True
+    }
 
 repl :: IO ()
 repl = do
   _ <-
     flip evalStateT programContext
-      . runInputT (defaultSettings {historyFile = Just ".crossbow_history", autoAddHistory = True})
+      . runInputT settings
       $ loop
   print "Exiting"
   where

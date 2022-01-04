@@ -178,7 +178,7 @@ mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])
 
 name :: P Text
-name = T.pack <$> many1 (noneOf "!{}[]()|_ \t\n,\"\'#")
+name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#")
 
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins
