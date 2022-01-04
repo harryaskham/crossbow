@@ -103,7 +103,7 @@ maxArgIx _ = Nothing
 numArgs :: Value -> Int
 numArgs (VLambda clauses) =
   case mapMaybe maxArgIx clauses of
-    [] -> 1
+    [] -> 0
     ns -> L.maximum ns + 1
 numArgs _ = error "Can't call numArgs on a non lambda"
 
@@ -127,7 +127,7 @@ compileLambda lambda@(VLambda clauses) =
                     runClauses cs'
             )
     -- Register the lambda with the namespace
-    when debugEvaluation (print $ "Compiled lambda: " <> lambdaName)
+    when debugEvaluation (print $ "Compiled lambda with # args: " <> show (lambdaName, nArgs))
     (ProgramContext pp builtins) <- get
     put (ProgramContext pp (M.insert lambdaName impl builtins))
     return . Right $ VFunction (Function lambdaName [])

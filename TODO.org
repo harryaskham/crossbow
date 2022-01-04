@@ -3,6 +3,7 @@
 - Do Next
   - [ ] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
   - [ ] File format with spaces separation is ambiguous
+    - Could fix with value parens
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
   - [ ] Move AOC solutions to an external file

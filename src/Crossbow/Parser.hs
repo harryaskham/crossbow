@@ -65,6 +65,7 @@ value =
         vRange,
         vNumber,
         inParens value,
+        vLambdaZeroArgs,
         vLambda,
         vIdentifier,
         vFunction,
@@ -150,6 +151,16 @@ vLambda = do
           0 -> VIdentifier "$0" : cs
           _ -> cs
   return $ VLambda csWithInitial
+
+-- A zero argument lambda must have at least two clauses otherwise it's just going to be a value
+-- TODO: We could just make this what parens always do; but no, they disambiguate
+vLambdaZeroArgs :: P Value
+vLambdaZeroArgs = do
+  cs <- between (char '(') (char ')') clauses
+  when (length cs < 2) $ fail "Require 2+ clauses for a zero arg lambda"
+  case mapMaybe maxArgIx cs of
+    [] -> return $ VLambda cs
+    _ -> fail "Zero arg lambda has arguments"
 
 mapWrap :: Int -> Function -> Function
 mapWrap 0 f = f
