@@ -21,6 +21,9 @@ settings =
       autoAddHistory = True
     }
 
+replPretty :: PrettyTruncated a => a -> Text
+replPretty = prettyTruncated
+
 repl :: IO ()
 repl = do
   prefs <- readPrefs ".haskeline"
@@ -40,6 +43,6 @@ repl = do
         Just input -> do
           pE <- lift $ compile (T.pack input)
           case pE of
-            Right result -> liftIO $ putTextLn (T.intercalate "\n" (pretty <$> result))
+            Right result -> liftIO $ putTextLn (T.intercalate "\n" (replPretty <$> result))
             Left e -> liftIO $ putTextLn (pretty e)
       loop

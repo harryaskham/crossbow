@@ -4,7 +4,7 @@
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
     - Still breakages with lambda evaluation
-  - [ ] PrettyTruncated class
+  - [X] PrettyTruncated class
   - [ ] rename builtins to namespace
   - [ ] Lib is dynamically loaded with a default value
     - or is this too slow?
@@ -25,6 +25,7 @@
     - Kind of working, just needs m
   - [X] Tests for AOC use runFile
 - Language features
+  - [ ] REPL options to switch between truncated / full printing
   - [ ] proper function definition w/ named args
     - should be okay to lean on substitution mechanism if Function stores the names to sub in order
   - [ ] emacs mode
@@ -84,7 +85,7 @@
   - [ ] Builtin for reading piped STDIN
   - [ ] Evaluate on keypress
   - [ ] Auto-updating display as you type
-    - With truncation for long strings, lists
+  - [ ] With truncation for long strings, lists
   - [ ] AST Tree mode; show forks, monadics as a digraph in ncurses
   - [ ] Terminal colors
   - [ ] Vim-like bindings w/ clause semantics

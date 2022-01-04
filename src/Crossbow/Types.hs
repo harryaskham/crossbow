@@ -322,3 +322,19 @@ instance Pretty Function where
 
 instance Pretty a => Pretty [a] where
   pretty as = "[" <> T.intercalate "," (pretty <$> as) <> "]"
+
+class PrettyTruncated a where
+  prettyTruncated :: a -> Text
+
+instance PrettyTruncated Value where
+  prettyTruncated vl@(VList a)
+    | length a <= 10 = pretty vl
+    | isString vl =
+      let as = take 5 a
+          bs = take 5 (drop (length a - 5) a)
+       in pretty $ VList $ as ++ (VChar <$> "...") ++ bs
+    | otherwise =
+      let as = take 3 a
+          bs = take 3 (drop (length a - 3) a)
+       in "[" <> T.intercalate "," (pretty <$> as) <> "..." <> T.intercalate "," (pretty <$> bs) <> "]"
+  prettyTruncated v = pretty v
