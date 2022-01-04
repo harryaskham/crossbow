@@ -134,17 +134,15 @@ value =
     -- A polish notation left-applied func with maybe unbound variables
     vFuncL :: P Value
     vFuncL = do
-      f <- ignoreSpaces function
-      mapBangs <- many (char '!')
-      args <- many1 value
-      let (Function mName mArgs) = mapWrap (length mapBangs) f
-      return $ VFunction (Function mName (mArgs ++ args))
+      VFunction (Function name args) <- vFunc
+      args' <- many1 value
+      return $ VFunction (Function name (args ++ args'))
     -- Finally, a func with no arguments
     vFunc :: P Value
     vFunc = do
       f <- ignoreSpaces function
       mapBangs <- many (char '!')
-      return $ VFunction (mapWrap (length mapBangs) f)
+      return $ mapWrap (length mapBangs) (VFunction f)
     vFunction :: P Value
     vFunction =
       firstOf
@@ -178,9 +176,9 @@ vLambdaZeroArgs = do
     [] -> return $ VLambda cs
     _ -> fail "Zero arg lambda has arguments"
 
-mapWrap :: Int -> Function -> Function
+mapWrap :: Int -> Value -> Value
 mapWrap 0 f = f
-mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])
+mapWrap n f = mapWrap (n - 1) (VFunction (Function "map" [f]))
 
 name :: P Text
 name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#")
