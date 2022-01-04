@@ -321,4 +321,4 @@ instance Pretty Function where
   pretty (Function name args) = "(" <> name <> " " <> pretty args
 
 instance Pretty a => Pretty [a] where
-  pretty as = "[" <> T.intercalate ", " (pretty <$> as) <> "]"
+  pretty as = "[" <> T.intercalate "," (pretty <$> as) <> "]"
