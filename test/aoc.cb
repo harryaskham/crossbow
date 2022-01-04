@@ -9,3 +9,4 @@ aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', ne
 
 # Day 3
 aoc 3 | lines | transpose | int!! | fork 2 | [mode!, antimode!] | bits! | monadic *"
+# aoc 3 | lines | int!! | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!
