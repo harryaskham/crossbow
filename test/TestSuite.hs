@@ -93,7 +93,7 @@ main = do
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
   assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
-  -- TODO: Mapbang lambdas
+  assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {foldl1 (+) $0}!!" (VList [VList [VInteger 6]])
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d1 | pairs | count (monadic <)" (VInteger 1316)
 

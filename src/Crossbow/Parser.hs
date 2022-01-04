@@ -156,6 +156,7 @@ value =
 vLambda :: P Value
 vLambda = do
   cs <- between (char '{') (char '}') clauses
+  mapBangs <- many (char '!')
   let numArgs =
         case mapMaybe maxArgIx cs of
           [] -> 0
@@ -164,7 +165,7 @@ vLambda = do
         case numArgs of
           0 -> VIdentifier "$0" : cs
           _ -> cs
-  return $ VLambda csWithInitial
+  return $ mapWrap (length mapBangs) (VLambda csWithInitial)
 
 -- A zero argument lambda must have at least two clauses otherwise it's just going to be a value
 -- TODO: We could just make this what parens always do; but no, they disambiguate
