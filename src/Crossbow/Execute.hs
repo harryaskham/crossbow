@@ -21,8 +21,9 @@ settings =
       autoAddHistory = True
     }
 
-replPretty :: PrettyTruncated a => a -> Text
-replPretty = prettyTruncated
+replPretty :: (Pretty a, PrettyTruncated a) => a -> Text
+--replPretty = prettyTruncated
+replPretty = pretty
 
 repl :: IO ()
 repl = do
