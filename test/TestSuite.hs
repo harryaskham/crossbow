@@ -23,7 +23,7 @@ assertFileEvaluatesTo path expected = do
   pE <- runFile path
   case pE of
     Left e -> assertFailure $ T.unpack (T.pack path <> "\nFailed with:\n" <> pretty e)
-    Right v -> assertEqual path v expected
+    Right v -> assertEqual path (filter (/= VNull) v) expected
 
 main :: IO ()
 main = do
@@ -95,81 +95,57 @@ main = do
   -- TODO: Fix this: assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
   -- TODO: Mapbang lambdas
 
-  assertFileEvaluatesTo "test/file_test.cb" [VNull, VNull, VInteger 3]
+  assertFileEvaluatesTo "test/file_test.cb" [VInteger 3]
 
-  assertEvaluatesTo
-    "Day 1 (Part 1)"
-    "aoc 1 | ints | pairs | count (monadic <)"
-    (VInteger 1316)
-
-  assertEvaluatesTo
-    "Day 1 (Part 2)"
-    "aoc 1 | ints | windows 3 | sum! | pairs | count (monadic <)"
-    (VInteger 1344)
-
-  assertEvaluatesTo
-    "Day 2 (Part 1)"
-    "aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | sum | monadic *"
-    (VInteger 1690020)
-
-  assertEvaluatesTo
-    "Day 2 (Part 2)"
-    "aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | fold {$0|first (+ (fst $1))|second (+ (* (fst $1) (thd $0)))|third (+ (snd $1))} [0,0,0] | take 2 | monadic *"
-    (VInteger 1408487760)
-
-  assertEvaluatesTo
-    "Day 3 (Part 1)"
-    "aoc 3 | lines | transpose | int!! | fork 2 | [mode!, antimode!] | bits! | monadic *"
-    (VInteger 3320834)
-
--- TODO: needs a dowhile / until
---assertEvaluatesTo "Day 3 (Part 2)" "aoc 3 | lines | int!! | fork 2 | [map {[$0, ix 0 $0]}, {map (ix 0)|mode}]" (VInteger 4481199)
--- Runs one step:
--- aoc 3 | lines | int!! | fork 2 | [id, map (ix 0)] | second mode | {$0|second (fork (length (fst $0)))} | monadic zip | filter {$0|fst|ix 0|==(snd $0)} | fst!
--- aoc 3 | lines | int!! | fork 3 | [transpose, id, id] | [map (ix 0), map (ix 0), id] | first mode | {$0|first fork (length snd $0)} | monadic zip3 | filter (monadic {== $0 $1}) | thd
--- Should do it, but fails why?
--- aoc 3 | lines | int!! | fold {$0 | fork 3 | [transpose, id, id] | [map (ix $1), map (ix $1), id] | first mode | first (fork (length $0)) | monadic zip3 | filter (monadic ==) | thd!} _ (0:4)
---assertEvaluatesTo "Day 4 (Part 1)" "" (VInteger 35670)
---assertEvaluatesTo "Day 4 (Part 2)" "" (VInteger 22704)
---assertEvaluatesTo "Day 5 (Part 1)" "" (VInteger 6225)
---assertEvaluatesTo "Day 5 (Part 2)" "" (VInteger 22116)
---assertEvaluatesTo "Day 6 (Part 1)" "" (VInteger 377263)
---assertEvaluatesTo "Day 6 (Part 2)" "" (VInteger 1695929023803)
---assertEvaluatesTo "Day 7 (Part 1)" "" (VInteger 356992)
---assertEvaluatesTo "Day 7 (Part 2)" "" (VInteger 101268110)
---assertEvaluatesTo "Day 8 (Part 1)" "" (VInteger 488)
---assertEvaluatesTo "Day 8 (Part 2)" "" (VInteger 1040429)
---assertEvaluatesTo "Day 9 (Part 1)" "" (VInteger 465)
---assertEvaluatesTo "Day 9 (Part 2)" "" (VInteger 1269555)
---assertEvaluatesTo "Day 10 (Part 1)" "" (VInteger 392139)
---assertEvaluatesTo "Day 10 (Part 2)" "" (VInteger 4001832844)
---assertEvaluatesTo "Day 11 (Part 1)" "" (VInteger 1705)
---assertEvaluatesTo "Day 11 (Part 2)" "" (VInteger 265)
---assertEvaluatesTo "Day 12 (Part 1)" "" (VInteger 3485)
---assertEvaluatesTo "Day 12 (Part 2)" "" (VInteger 85062)
---assertEvaluatesTo "Day 13 (Part 1)" "" (VInteger 720)
---assertEvaluatesTo "Day 13 (Part 2)" "" VText " ##  #  # ###  ###  ###   ##  #  # ####\n#  # #  # #  # #  # #  # #  # #  #    #\n#  # #### #  # #  # #  # #  # #  #   # \n#### #  # ###  ###  ###  #### #  #  #  \n#  # #  # #    # #  #    #  # #  # #   \n#  # #  # #    #  # #    #  #  ##  ####"
---assertEvaluatesTo "Day 14 (Part 1)" "" (VInteger 2621)
---assertEvaluatesTo "Day 14 (Part 2)" "" (VInteger 2843834241366)
---assertEvaluatesTo "Day 15 (Part 1)" "" (VInteger 673)
---assertEvaluatesTo "Day 15 (Part 2)" "" (VInteger 2893)
---assertEvaluatesTo "Day 16 (Part 1)" "" (VInteger 971)
---assertEvaluatesTo "Day 16 (Part 2)" "" (VInteger 831996589851)
---assertEvaluatesTo "Day 17 (Part 1)" "" (VInteger 23005)
---assertEvaluatesTo "Day 17 (Part 2)" "" (VInteger 2040)
---assertEvaluatesTo "Day 18 (Part 1)" "" (VInteger 4173)
---assertEvaluatesTo "Day 18 (Part 2)" "" (VInteger 4706)
---assertEvaluatesTo "Day 19 (Part 1)" "" (VInteger 436)
---assertEvaluatesTo "Day 19 (Part 2)" "" (VInteger 10918)
---assertEvaluatesTo "Day 20 (Part 1)" "" (VInteger 5619)
---assertEvaluatesTo "Day 20 (Part 2)" "" (VInteger 20122)
---assertEvaluatesTo "Day 21 (Part 1)" "" (VInteger 1073709)
---assertEvaluatesTo "Day 21 (Part 2)" "" (VInteger 148747830493442)
---assertEvaluatesTo "Day 22 (Part 1)" "" (VInteger 623748)
---assertEvaluatesTo "Day 22 (Part 2)" "" (VInteger 1227345351869476)
---assertEvaluatesTo "Day 23 (Part 1)" "" (VInteger 10411)
---assertEvaluatesTo "Day 23 (Part 2)" "" (VInteger 46721)
---assertEvaluatesTo "Day 24 (Part 1)" "" (VInteger 98998519596997)
---assertEvaluatesTo "Day 24 (Part 2)" "" (VInteger 31521119151421)
---assertEvaluatesTo "Day 25 (Part 1)" "" (VInteger 458)
---assertEvaluatesTo "Day 25 (Part 2)" "\"Merry Christmas!\"" (VText "Merry Christmas!")
+  assertFileEvaluatesTo
+    "test/aoc.cb"
+    [ VInteger 1316,
+      -- VInteger 1344,
+      VInteger 1690020,
+      VInteger 1408487760,
+      VInteger 3320834
+      --VInteger 35670
+      --VInteger 22704
+      --VInteger 6225
+      --VInteger 22116
+      --VInteger 377263
+      --VInteger 1695929023803
+      --VInteger 356992
+      --VInteger 101268110
+      --VInteger 488
+      --VInteger 1040429
+      --VInteger 465
+      --VInteger 1269555
+      --VInteger 392139
+      --VInteger 4001832844
+      --VInteger 1705
+      --VInteger 265
+      --VInteger 3485
+      --VInteger 85062
+      --VInteger 720
+      --VText " ##  #  # ###  ###  ###   ##  #  # ####\n#  # #  # #  # #  # #  # #  # #  #    #\n#  # #### #  # #  # #  # #  # #  #   # \n#### #  # ###  ###  ###  #### #  #  #  \n#  # #  # #    # #  #    #  # #  # #   \n#  # #  # #    #  # #    #  #  ##  ####"
+      --VInteger 2621
+      --VInteger 2843834241366
+      --VInteger 673
+      --VInteger 2893
+      --VInteger 971
+      --VInteger 831996589851
+      --VInteger 23005
+      --VInteger 2040
+      --VInteger 4173
+      --VInteger 4706
+      --VInteger 436
+      --VInteger 10918
+      --VInteger 5619
+      --VInteger 20122
+      --VInteger 1073709
+      --VInteger 148747830493442
+      --VInteger 623748
+      --VInteger 1227345351869476
+      --VInteger 10411
+      --VInteger 46721
+      --VInteger 98998519596997
+      --VInteger 31521119151421
+      --VInteger 458
+      --Merry Christmas!\"" VText "Merry Christmas!"
+    ]

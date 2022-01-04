@@ -47,6 +47,9 @@ nonNewlineSpaces = many (oneOf " \t")
 ignoreSpaces :: P a -> P a
 ignoreSpaces p = nonNewlineSpaces *> p <* nonNewlineSpaces
 
+ignoreSpacesAndNewlines :: P a -> P a
+ignoreSpacesAndNewlines p = spaces *> p <* spaces
+
 clauseDivider :: P Char
 clauseDivider = ignoreSpaces (char '|')
 
@@ -63,7 +66,8 @@ value :: P Value
 value =
   ignoreSpaces $
     firstOf
-      [ vBool,
+      [ vComment,
+        vBool,
         binding,
         vRange,
         vNumber,
@@ -77,6 +81,11 @@ value =
         vString
       ]
   where
+    vComment :: P Value
+    vComment = do
+      ignoreSpaces (char '#')
+      many (noneOf "\n")
+      return VNull
     vIdentifier :: P Value
     vIdentifier = do
       char '$'
@@ -169,7 +178,7 @@ mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (Function "map" [VFunction f])
 
 name :: P Text
-name = T.pack <$> many1 (noneOf "!{}[]()|_ \t\n,\"\'")
+name = T.pack <$> many1 (noneOf "!{}[]()|_ \t\n,\"\'#")
 
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins

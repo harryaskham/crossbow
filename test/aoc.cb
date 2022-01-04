@@ -1,3 +1,11 @@
+# Day 1
 aoc 1 | ints | pairs | count (monadic <)
-aoc 1 | ints | windows 3 | sum! | pairs | count (monadic <)
+# disabled due to windows slowness
+# aoc 1 | ints | windows 3 | sum! | pairs | count (monadic <)
+
+# Day 2
 aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | sum | monadic *
+aoc 2 | lines | map {words|second int|first fst} | map {case (ix 0 $0) [['u', negate [0,ix 1 $0]],['d', [0,ix 1 $0]],['f',[ix 1 $0,0]]]} | fold {$0|first (+ (fst $1))|second (+ (* (fst $1) (thd $0)))|third (+ (snd $1))} [0,0,0] | take 2 | monadic *
+
+# Day 3
+aoc 3 | lines | transpose | int!! | fork 2 | [mode!, antimode!] | bits! | monadic *"

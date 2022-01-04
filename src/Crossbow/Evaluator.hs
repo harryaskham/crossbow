@@ -70,7 +70,7 @@ runProgram doPrint css = go css []
           when doPrint $ liftIO $ putTextLn (pretty e)
           return $ Left e
         Right v -> do
-          when doPrint $ putTextLn (pretty v)
+          when (doPrint && v /= VNull) $ putTextLn (pretty v)
           go css (v : vs)
 
 runClauses :: [Value] -> Eval (Either CrossbowError Value)
@@ -352,7 +352,7 @@ builtins =
       ("square", CBImpl "{fork (length $0) $0}"),
       ("enum", CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}"),
       ("lengthy", CBImpl "{$1|length|(== $0)}"),
-      ("windows", CBImpl "{$1|square|enum|map (monadic drop)|map (take $0)|filter (lengthy $0)}"),
+      ("windows", CBImpl "{foldl {$0|second (: (take $1 (fst $0)))|first (drop 1)} [$1,[]] (fork (- (+ 1 (length $1)) $0) $0) | snd | reverse}"),
       ( "nap",
         wrapImpl 3 $
           HSImpl
