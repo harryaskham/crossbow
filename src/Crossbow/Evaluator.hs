@@ -231,11 +231,9 @@ runHSImpl hsF args = do
       when debugEvaluation (print $ "HSImpl succeeded with result: " <> pretty result)
       deepEval result
 
--- TODO: Alias chains cause this to break
 evalF :: Value -> Eval (Either CrossbowError Value)
 evalF vf@(VFunction (Function name args)) = do
-  when debugEvaluation do
-    print $ "Evaluating VFunction: " <> pretty vf
+  when debugEvaluation (print $ "Evaluating VFunction: " <> pretty vf)
   builtins <- gets _builtins
   case M.lookup name builtins of
     Nothing -> return . Left . EvalError $ "No value named: " <> name
@@ -248,16 +246,9 @@ evalF vf@(VFunction (Function name args)) = do
       case resultE of
         Left e -> do
           when debugEvaluation (print $ "Could not apply: " <> pretty e)
-          return $ Right vf -- If we could not apply, don't
+          return $ Right vf -- If we could not apply, don't; just return the partially applied function
         Right result -> do
           when debugEvaluation (print $ "Bound successfully with result: " <> pretty result)
-          -- If the result is another function, we had an alias chain, and we need to ensure
-          -- the previous args parensIf
-          -- TODO: But what if a fully applied function returns another function?
-          -- Yep, the below kills tests
-          -- case result of
-          --   VFunction (Function name _) -> deepEval $ VFunction (Function name args)
-          --   v -> return . Right $ v
           return $ Right result
 evalF v = return $ Right v
 
