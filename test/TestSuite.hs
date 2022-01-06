@@ -101,6 +101,11 @@ main = do
   assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {$0 | foldl1 (+)}!!" (VList [VList [VInteger 6]])
   assertEvaluatesTo "ix underscores" "0:10 | _3" (VInteger 3)
   assertCrossbow "List intersect" "intersection [1,2,3] [3,4,5] | == [3]"
+  assertCrossbow "List union" "union [1,2,3] [3,4,5] | == [1,2,3,4,5]"
+  assertCrossbow "List difference" "difference [1,2,3] [3,4,5] | == [1,2]"
+  assertCrossbow "Set intersect" "intersection {1,2,3} {3,4,5} | == {3}"
+  assertCrossbow "Set union" "union {1,2,3} {3,4,5} | == {1,2,3,4,5}"
+  assertCrossbow "Set difference" "difference {1,2,3} {3,4,5} | == {1,2}"
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 
