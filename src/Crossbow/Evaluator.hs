@@ -594,5 +594,13 @@ builtins =
                   -- TODO: Could actually use the imported values here
                   Right _ -> return $ Right VNull
             )
+      ),
+      ( "trace",
+        wrapImpl 2 $
+          HSImpl
+            ( \[msg, v] -> do
+                putTextLn $ "[trace] " <> pretty msg
+                return $ Right v
+            )
       )
     ]
