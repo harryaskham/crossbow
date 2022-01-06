@@ -30,6 +30,8 @@ d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 [((mode) favouring 1), ((antimode) favouring 0)] | {fold | step $0 | d3 | 0:11}! | head! | bits! | `*
 
 
-# Day 4
-board <- {take 5 | int | {enum | assoc}! |enum | assoc}
+# Day 4 - TODO: flip map, run haskell soln
+board <- {take 5 | int | {enum | assoc}! |enum | assoc | {++ [$0] | [{}]}}
 d4 <- (aoc 4 | lines | fork 2 | [take 2, drop 2] | first {head|splitOn ","|int} | second {words!|chunks 6|board!})
+#_0 d4
+#_1 d4 | take 3
