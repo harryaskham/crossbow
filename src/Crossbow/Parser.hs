@@ -72,8 +72,8 @@ value =
         vIx,
         vBool,
         binding,
-        vMap, -- Map above lambdas
         vSet, -- Set above lambdas
+        vMap, -- Map above lambdas
         vRange,
         vNumber,
         inParens value,
