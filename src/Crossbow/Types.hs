@@ -5,6 +5,7 @@ import Data.Char
 import Data.Either.Extra (fromRight')
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Text.Read qualified as TR
 import Data.Tuple.Extra (both)
@@ -70,6 +71,7 @@ data Value
   | VBool Bool
   | VChar Char
   | VList [Value]
+  | VSet (Set Value)
   | VFunction Function
   | VLambda [Value]
   | VIdentifier Text
@@ -182,6 +184,7 @@ asText (VDouble a) = show a
 asText (VBool a) = show a
 asText (VChar a) = T.pack [a]
 asText (VList as) = mconcat (asText <$> as)
+asText (VSet as) = mconcat (asText <$> S.toList as)
 asText (VFunction _) = error "Can't coerce function to text"
 asText VNull = ""
 
@@ -194,6 +197,7 @@ truthy :: Value -> Bool
 truthy (VBool b) = b
 truthy (VInteger 0) = False
 truthy (VList []) = False
+truthy (VSet a) = not (S.null a)
 truthy (VDouble 0.0) = False
 truthy VNull = False
 truthy _ = True
@@ -215,6 +219,7 @@ castToInt v@(VList vs)
 castToInt f@(VFunction _) = Left $ CastToIntError f
 castToInt (VBool b) = Right $ VInteger (fromIntegral $ fromEnum b)
 castToInt VNull = Right (VInteger 0)
+castToInt (VSet vs) = VSet . S.fromList <$> traverse castToInt (S.toList vs)
 
 castToDouble :: Value -> Either CrossbowError Value
 castToDouble v@(VDouble _) = Right v
@@ -228,6 +233,7 @@ castToDouble (VBool b) = Right $ VInteger $ (fromIntegral $ fromEnum b)
 castToDouble f@(VFunction _) = Left $ CastToDoubleError f
 castToDouble i@(VIdentifier _) = Left $ CastToDoubleError i
 castToDouble VNull = Right (VDouble 0.0)
+castToDouble (VSet vs) = VSet . S.fromList <$> traverse castToDouble (S.toList vs)
 
 castToChar :: Value -> Either CrossbowError Value
 castToChar v@(VChar _) = Right v
@@ -251,6 +257,7 @@ castToBool v@(VChar _) = Left $ CastToCharError v
 castToBool f@(VFunction _) = Left $ CastToCharError f
 castToBool i@(VIdentifier _) = Left $ CastToCharError i
 castToBool VNull = Right $ VBool True
+castToBool (VSet vs) = VSet . S.fromList <$> traverse castToBool (S.toList vs)
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
@@ -276,6 +283,8 @@ instance Ord Value where
     Right v -> v
   _ <= (VList _) = error "Invalid Ord on list"
   (VList _) <= _ = error "Invalid Ord on list"
+  _ <= (VSet _) = error "Invalid Ord on set"
+  (VSet _) <= _ = error "Invalid Ord on set"
   (VBool a) <= (VBool b) = a <= b
 
 data Function = Function Text [Value]
@@ -316,12 +325,16 @@ instance Pretty Value where
   pretty (VLambda cs) = "<lambda " <> T.intercalate "|" (pretty <$> cs) <> ">"
   pretty (VIdentifier i) = i
   pretty VNull = ""
+  pretty (VSet a) = pretty a
 
 instance Pretty Function where
   pretty (Function name args) = "(" <> name <> " " <> pretty args <> ")"
 
 instance Pretty a => Pretty [a] where
   pretty as = "[" <> T.intercalate "," (pretty <$> as) <> "]"
+
+instance Pretty a => Pretty (Set a) where
+  pretty as = "{" <> T.intercalate "," (pretty <$> S.toList as) <> "}"
 
 class PrettyTruncated a where
   prettyTruncated :: a -> Text

@@ -8,7 +8,7 @@ aoc 1 | ints | windows 3 | sum! | pairs | count `<
 
 
 # Day 2
-sub <- {case (head $0) [['u', negate [0, _1 $0]], ['d', [0, _1 $0]], ['f', [_1 $0, 0]]]}
+sub <- {case | head $0 | [['u', negate [0, _1 $0]], ['d', [0, _1 $0]], ['f', [_1 $0, 0]]]}
 d2 <- (aoc 2 | lines | {words | second int | first fst}! | sub!)
 
 # Part 1
@@ -21,10 +21,10 @@ d2 | fold {$0 | [+ (fst $1), + (* (fst $1) (thd $0)), + (snd $1)]} [0, 0, 0] | t
 # Day 3
 d3 <- (aoc 3 | lines | int!!)
 favouring <- {f <- $0 | m <- f $2 | $2 | counts | snd! | `== | if | $1 | m}
-step <- {i <- $2 | map (_i) $1 | $0 | {m <- $0} | filter {== (m) (_(i) $0)} $1}
+step <- {i <- $2 | map (_i) $1 | $0 | m <- | filter {== | m | _(i) $0} $1}
 
 # Part 1
 d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 
 # Part 2
-[((mode) favouring 1), ((antimode) favouring 0)] | {fold (step $0) (d3) 0:11}! | head! | bits! | `*
+[((mode) favouring 1), ((antimode) favouring 0)] | {fold | step $0 | d3 | 0:11}! | head! | bits! | `*

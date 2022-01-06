@@ -8,6 +8,9 @@ import Crossbow.Util
 import Data.Text qualified as T
 import Test.HUnit (assertEqual, assertFailure)
 
+assertCrossbow :: Text -> Text -> IO ()
+assertCrossbow msg source = assertEvaluatesTo msg source (VBool True)
+
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
@@ -87,14 +90,17 @@ main = do
   assertEvaluatesTo "evens" "1:10|filter even" (VList $ VInteger <$> [2, 4, 6, 8, 10])
   assertEvaluatesTo "multivariable lambda" "{$0|(+ $1)|(* $2)}|1|2|3" (VInteger 9)
   assertEvaluatesTo "zero argument lambdas" "(1 | + 2) | * 3" (VInteger 9)
+  assertEvaluatesTo "binding" "a <- 123 | a" (VInteger 123)
+  assertEvaluatesTo "partial" "123 | a <- | a" (VInteger 123)
   assertEvaluatesTo "enumeration" "enum 1:3" (VList [VList [VInteger 0, VInteger 1], VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "lengthy" "lengthy 3 1:3" (VBool True)
   assertEvaluatesTo "lengthy" "lengthy 3 1:4" (VBool False)
   assertEvaluatesTo "windows" "windows 2 1:3" (VList [VList [VInteger 1, VInteger 2], VList [VInteger 2, VInteger 3]])
   assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
   assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
-  assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {foldl1 (+) $0}!!" (VList [VList [VInteger 6]])
+  assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {$0 | foldl1 (+)}!!" (VList [VList [VInteger 6]])
   assertEvaluatesTo "ix underscores" "0:10 | _3" (VInteger 3)
+  assertCrossbow "List intersect" "intersection [1,2,3] [3,4,5] | == [3]"
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 

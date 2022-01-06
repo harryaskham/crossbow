@@ -1,10 +1,13 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Sets
+  - [ ] Maps
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
     - Still breakages with lambda evaluation
   - [X] PrettyTruncated class
+  - [ ] Implement test suite in Crossbow instead; eval from inside Haskell harness
   - [ ] rename builtins to namespace
   - [ ] Lib is dynamically loaded with a default value
     - or is this too slow?

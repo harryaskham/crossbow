@@ -10,6 +10,7 @@ import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.String qualified as ST
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
@@ -351,7 +352,7 @@ builtins =
       ("zip", wrapImpl 2 $ HSImpl (\[VList as, VList bs] -> return . Right $ VList ((\(a, b) -> VList [a, b]) <$> zip as bs))),
       ("zip3", wrapImpl 3 $ HSImpl (\[VList as, VList bs, VList cs] -> return . Right $ VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs))),
       ("pairs", CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}"),
-      ("square", CBImpl "{fork (length $0) $0}"),
+      ("square", CBImpl "{$0 | fork (length $0)}"),
       ("enum", CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}"),
       ("lengthy", CBImpl "{$1|length|(== $0)}"),
       ("windows", CBImpl "{$1|tails|take $0|transpose|take ((1 + length $1) - $0)}"),
@@ -411,15 +412,15 @@ builtins =
             )
       ),
       ("if", wrapImpl 3 $ HSImpl (\[p, a, b] -> return . Right $ let (VBool p') = withPrettyError $ castToBool p in if p' then a else b)),
-      ("aoc", CBImpl "{read ((\"test/aoc_input/\" ++ (string $0)) ++ \".txt\")}"),
+      ("aoc", CBImpl "{((\"test/aoc_input/\" ++ (string $0)) ++ \".txt\") | read}"),
       ("sum", CBImpl "foldl|+|0"),
       ("odd", CBImpl "{mod $0 2|bool}"),
       ("even", CBImpl "{odd $0|not}"),
-      ("not", CBImpl "{if $0 False True}"),
+      ("not", CBImpl "{if | $0 | False | True}"),
       ("maximum", CBImpl "foldl1 max"),
       ("minimum", CBImpl "foldl1 min"),
-      ("maximumOn", CBImpl "{foldl1 (maxOn $0) $1}"),
-      ("minimumOn", CBImpl "{foldl1 (minOn $0) $1}"),
+      ("maximumOn", CBImpl "{$1 | foldl1 (maxOn $0)}"),
+      ("minimumOn", CBImpl "{$1 | foldl1 (minOn $0)}"),
       ("mode", CBImpl "{counts|maximumOn snd|fst}"),
       ("antimode", CBImpl "{counts|minimumOn snd|fst}"),
       ("length", CBImpl "{map (const 1) | sum}"),
@@ -487,8 +488,8 @@ builtins =
                     xs
             )
       ),
-      ("foldl1", CBImpl "{foldl $0 (head $1) (tail $1)}"),
-      ("scanl1", CBImpl "{scanl $0 (head $1) (tail $1)}"),
+      ("foldl1", CBImpl "{foldl | $0 | head $1 | tail $1}"),
+      ("scanl1", CBImpl "{scanl | $0 | head $1 | tail $1}"),
       ("fold", CBImpl "foldl"),
       ("scan", CBImpl "scanl"),
       ("transpose", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as))),
@@ -609,6 +610,30 @@ builtins =
             ( \[v] -> do
                 putTextLn $ "[trace] " <> pretty v
                 return $ Right v
+            )
+      ),
+      ( "union",
+        wrapImpl 2 $
+          HSImpl
+            ( \case
+                [VList a, VList b] -> return $ Right . VList $ a `L.union` b
+                [VSet a, VSet b] -> return $ Right . VSet $ a `S.union` b
+            )
+      ),
+      ( "intersection",
+        wrapImpl 2 $
+          HSImpl
+            ( \case
+                [VList a, VList b] -> return $ Right . VList $ a `L.intersect` b
+                [VSet a, VSet b] -> return $ Right . VSet $ a `S.intersection` b
+            )
+      ),
+      ( "difference",
+        wrapImpl 2 $
+          HSImpl
+            ( \case
+                [VList a, VList b] -> return $ Right . VList $ a L.\\ b
+                [VSet a, VSet b] -> return $ Right . VSet $ a `S.difference` b
             )
       )
     ]

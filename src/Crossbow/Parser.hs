@@ -11,6 +11,7 @@ import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.String qualified
 import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
@@ -73,6 +74,7 @@ value =
         binding,
         vRange,
         vNumber,
+        vSet, -- Set above lambdas
         inParens value,
         vLambdaZeroArgs,
         vLambda,
@@ -109,6 +111,8 @@ value =
     vNumber = try vNegativeNumber <|> try vPositiveNumber
     vList :: P Value
     vList = VList <$> between (char '[') (char ']') (value `sepBy` ignoreSpaces (char ','))
+    vSet :: P Value
+    vSet = VSet . S.fromList <$> between (char '{') (char '}') (value `sepBy` ignoreSpaces (char ','))
     vChar :: P Value
     vChar = VChar <$> between (char '\'') (char '\'') anyChar
     vString :: P Value
@@ -209,5 +213,7 @@ binding :: P Value
 binding = do
   n <- name
   ignoreSpaces (string "<-")
-  v <- value
-  return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n, v])
+  vM <- optionMaybe value
+  case vM of
+    Nothing -> return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n])
+    Just v -> return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n, v])
