@@ -108,6 +108,8 @@ main = do
   assertCrossbow "Set union" "union {1,2,3} {3,4,5} | == {1,2,3,4,5}"
   assertCrossbow "Set difference" "difference {1,2,3} {3,4,5} | == {1,2}"
   assertCrossbow "Set casting" "set [1,2,3] | == {1,2,3}"
+  assertCrossbow "Set insertion" "{1,2,3} | + 4 | + 5 | == {1,2,3,4,5}"
+  assertCrossbow "Set deletion" "{1,2,3} | delete 2 | == {1,3}"
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 

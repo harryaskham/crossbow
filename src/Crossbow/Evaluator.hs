@@ -636,6 +636,21 @@ builtins =
                 [VSet a, VSet b] -> return $ Right . VSet $ a `S.difference` b
             )
       ),
+      ( "insert",
+        wrapImpl 2 $
+          HSImpl
+            ( \case
+                [a, VSet b] -> return $ Right . VSet $ S.insert a b
+            )
+      ),
+      ( "delete",
+        wrapImpl 2 $
+          HSImpl
+            ( \case
+                [a, VList b] -> return $ Right . VList $ a `L.delete` b
+                [a, VSet b] -> return $ Right . VSet $ a `S.delete` b
+            )
+      ),
       ( "list",
         wrapImpl 1 $
           HSImpl

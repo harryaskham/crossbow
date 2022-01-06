@@ -105,6 +105,9 @@ instance Semigroup Value where
   f@(VFunction _) <> _ = error $ "Cannot + unevaluated function: " <> show f
   (VIdentifier i) <> _ = error $ "Cannot + unbound identifier: " <> i
   VNull <> _ = error $ "Cannot + null: "
+  (VSet a) <> (VSet b) = VSet (a `S.union` b)
+  (VSet a) <> b = VSet (S.insert b a)
+  a <> (VSet b) = VSet (S.insert a b)
 
 instance Num Value where
   (+) = (<>)
