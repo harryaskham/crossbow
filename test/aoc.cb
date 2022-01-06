@@ -28,3 +28,7 @@ d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 
 # Part 2
 [((mode) favouring 1), ((antimode) favouring 0)] | {fold | step $0 | d3 | 0:11}! | head! | bits! | `*
+
+
+# Day 4
+d4 <- (aoc 4 | lines | fork 2 | [take 2, drop 2] | [head, words!]

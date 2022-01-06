@@ -9,6 +9,7 @@ import Data.Foldable (foldl1)
 import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
 import Data.List qualified as L
+import Data.List.Extra (chunksOf)
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.String qualified as ST
@@ -356,6 +357,10 @@ builtins =
       ("enum", CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}"),
       ("lengthy", CBImpl "{$1|length|(== $0)}"),
       ("windows", CBImpl "{$1|tails|take $0|transpose|take ((1 + length $1) - $0)}"),
+      ( "chunks",
+        wrapImpl 2 $
+          HSImpl (\[VInteger a, VList as] -> return . Right $ VList (VList <$> chunksOf (fromInteger a) as))
+      ),
       ( "nap",
         wrapImpl 3 $
           HSImpl
