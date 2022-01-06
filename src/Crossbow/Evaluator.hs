@@ -242,7 +242,12 @@ evalF vf@(VFunction (Function name args)) = do
         case impl of
           HSImpl hsF -> runHSImpl hsF args
           CBImpl cbF -> runCBImpl cbF args
-          ConstImpl constV -> return $ Right constV
+          ConstImpl constV ->
+            -- For constant (bound) implementations, we need to check if this is a stored compileLambda
+            -- if it is, we need to continue evaluation.
+            case constV of
+              (VFunction (Function name' _)) -> evalF (VFunction (Function name' args))
+              v -> return $ Right v
       case resultE of
         Left e -> do
           when debugEvaluation (print $ "Could not apply: " <> pretty e)

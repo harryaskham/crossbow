@@ -1,6 +1,7 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] We don't have referential transparency, can't just replace an exp with itself
   - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
     - VConst is the issue I think; const functions are not getting args propagated
     - Still breakages with lambda evaluation
