@@ -17,6 +17,7 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
+import Extra (splitOn)
 import Language.Haskell.TH.Ppr (parensIf)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (newStdGen, randomRs)
@@ -361,6 +362,10 @@ builtins =
         wrapImpl 2 $
           HSImpl (\[VInteger a, VList as] -> return . Right $ VList (VList <$> chunksOf (fromInteger a) as))
       ),
+      ( "splitOn",
+        wrapImpl 2 $
+          HSImpl (\[VList a, VList as] -> return . Right $ VList (VList <$> splitOn a as))
+      ),
       ( "nap",
         wrapImpl 3 $
           HSImpl
@@ -668,6 +673,13 @@ builtins =
                 [VSet a] -> return $ Right . VList $ S.toList a
                 [VMap a] -> return $ Right . VList $ (\(a, b) -> VList [a, b]) <$> M.toList a
                 [v] -> return $ Right . VList $ [v]
+            )
+      ),
+      ( "assoc",
+        wrapImpl 1 $
+          HSImpl
+            ( \case
+                [VList as] -> return $ Right . VMap $ M.fromList ((\(VList [k, v]) -> (k, v)) <$> as)
             )
       ),
       ( "set",
