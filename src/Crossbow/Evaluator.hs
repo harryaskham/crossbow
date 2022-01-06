@@ -602,5 +602,13 @@ builtins =
                 putTextLn $ "[trace] " <> pretty msg
                 return $ Right v
             )
+      ),
+      ( "traceId",
+        wrapImpl 1 $
+          HSImpl
+            ( \[v] -> do
+                putTextLn $ "[trace] " <> pretty v
+                return $ Right v
+            )
       )
     ]
