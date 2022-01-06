@@ -11,9 +11,7 @@ d2 | fold {$0|[+ (fst $1),+ (* (fst $1) (thd $0)),+(snd $1)]} [0, 0, 0] | take 2
 # Day 3
 d3 <- (aoc 3 | lines | int!!)
 d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
-# replace with (mode favouring 1)
 d3mode <- {d3m <- mode $0 | $0 | counts | traceId | snd! | `== | traceId | {if $0 1 d3m}}
 d3antimode <- {d3m <- antimode $0 | $0 | counts | traceId | snd! | `== | traceId | {if $0 0 d3m}}
-#favouring <- {mfn <- $0 | b <- $1 | d3m <- mfn $2 | $2 | counts | snd! | `== | {if $0 (b) (d3m)}}
 step <- {mfn <- $0 | bs <- $1 | i <- $2 | map (ix (i)) bs | mfn | {m <- $0} | trace [m, i, bs] | filter {== (m) (ix (i) $0)} bs}
 [fold (step (d3mode)) (d3) 0:11, fold (step (d3antimode)) (d3) 0:11] | head! | bits! | `*
