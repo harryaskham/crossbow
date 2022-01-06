@@ -156,7 +156,8 @@ value =
     vIx = do
       char '_'
       ix <- value
-      return $ VFunction (Function "ix" [ix])
+      v <- many value
+      return $ VFunction (Function "ix" (ix : v))
 
 -- On the fly function with arguments designated $0, $1... within {}
 -- If lambda has no argument, we assume it is preceded by $0
