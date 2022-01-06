@@ -20,11 +20,11 @@ d2 | fold {$0 | [+ (fst $1), + (* (fst $1) (thd $0)), + (snd $1)]} [0, 0, 0] | t
 
 # Day 3
 d3 <- (aoc 3 | lines | int!!)
-favouring <- {mfn <- $1 | d3m <- mfn $2 | $2 | counts | snd! | `== | if | $0 | d3m}
+favouring <- {mfn <- $0 | d3m <- mfn $2 | $2 | counts | snd! | `== | if | $1 | d3m}
 step <- {i <- $2 | map (ix (i)) $1 | $0 | {m <- $0} | filter {== (m) (ix (i) $0)} $1}
 
 # Part 1
 d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 
 # Part 2
-[fold (step (favouring 1 mode)) (d3) 0:11, fold (step (favouring 0 antimode)) (d3) 0:11] | head! | bits! | `*
+[((mode) favouring 1), ((antimode) favouring 0)] | {fold (step $0) (d3) 0:11}! | head! | bits! | `*

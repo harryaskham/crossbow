@@ -94,6 +94,7 @@ main = do
   assertEvaluatesTo "post-applied mapbangs" "[[[1,2,3]]]|sum!!" (VList [VList [VInteger 6]])
   assertEvaluatesTo "pre-applied mapbangs" "sum!! [[[1,2,3]]]" (VList [VList [VInteger 6]])
   assertEvaluatesTo "lambda mapbangs" "[[[1,2,3]]] | {foldl1 (+) $0}!!" (VList [VList [VInteger 6]])
+  assertEvaluatesTo "ix underscores" "0:10 | _3" (VInteger 3)
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 

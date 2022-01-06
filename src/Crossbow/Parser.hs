@@ -68,6 +68,7 @@ value =
   ignoreSpaces $
     firstOf
       [ vComment,
+        vIx,
         vBool,
         binding,
         vRange,
@@ -151,6 +152,11 @@ value =
           vFuncBin,
           vFunc
         ]
+    vIx :: P Value
+    vIx = do
+      char '_'
+      ix <- value
+      return $ VFunction (Function "ix" [ix])
 
 -- On the fly function with arguments designated $0, $1... within {}
 -- If lambda has no argument, we assume it is preceded by $0
@@ -183,7 +189,7 @@ mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (VFunction (Function "map" [f]))
 
 name :: P Text
-name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#`")
+name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#`_")
 
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins
