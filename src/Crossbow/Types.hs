@@ -72,6 +72,7 @@ data Value
   | VChar Char
   | VList [Value]
   | VSet (Set Value)
+  | VMap (Map Value Value)
   | VFunction Function
   | VLambda [Value]
   | VIdentifier Text
@@ -108,6 +109,9 @@ instance Semigroup Value where
   (VSet a) <> (VSet b) = VSet (a `S.union` b)
   (VSet a) <> b = VSet (S.insert b a)
   a <> (VSet b) = VSet (S.insert a b)
+  (VMap a) <> (VMap b) = VMap (a `M.union` b)
+  (VMap _) <> v = error $ "Cannot + map with " <> pretty v
+  v <> (VMap _) = error $ "Cannot + map with " <> pretty v
 
 instance Num Value where
   (+) = (<>)
@@ -187,7 +191,8 @@ asText (VDouble a) = show a
 asText (VBool a) = show a
 asText (VChar a) = T.pack [a]
 asText (VList as) = mconcat (asText <$> as)
-asText (VSet as) = mconcat (asText <$> S.toList as)
+asText (VSet as) = error "Can't coerce set to text"
+asText (VMap _) = error "Can't coerce map to text"
 asText (VFunction _) = error "Can't coerce function to text"
 asText VNull = ""
 
@@ -201,6 +206,7 @@ truthy (VBool b) = b
 truthy (VInteger 0) = False
 truthy (VList []) = False
 truthy (VSet a) = not (S.null a)
+truthy (VMap a) = not (M.null a)
 truthy (VDouble 0.0) = False
 truthy VNull = False
 truthy _ = True
@@ -223,6 +229,7 @@ castToInt f@(VFunction _) = Left $ CastToIntError f
 castToInt (VBool b) = Right $ VInteger (fromIntegral $ fromEnum b)
 castToInt VNull = Right (VInteger 0)
 castToInt (VSet vs) = VSet . S.fromList <$> traverse castToInt (S.toList vs)
+castToInt (VMap vs) = VMap <$> traverse castToInt vs
 
 castToDouble :: Value -> Either CrossbowError Value
 castToDouble v@(VDouble _) = Right v
@@ -237,6 +244,7 @@ castToDouble f@(VFunction _) = Left $ CastToDoubleError f
 castToDouble i@(VIdentifier _) = Left $ CastToDoubleError i
 castToDouble VNull = Right (VDouble 0.0)
 castToDouble (VSet vs) = VSet . S.fromList <$> traverse castToDouble (S.toList vs)
+castToDouble (VMap vs) = VMap <$> traverse castToDouble vs
 
 castToChar :: Value -> Either CrossbowError Value
 castToChar v@(VChar _) = Right v
@@ -250,6 +258,8 @@ castToChar (VBool b) = Right $ VChar (intToDigit $ fromEnum b)
 castToChar f@(VFunction _) = Left $ CastToCharError f
 castToChar i@(VIdentifier _) = Left $ CastToCharError i
 castToChar VNull = Left $ CastToCharError VNull
+castToChar (VSet vs) = VSet . S.fromList <$> traverse castToChar (S.toList vs)
+castToChar (VMap vs) = VMap <$> traverse castToChar vs
 
 castToBool :: Value -> Either CrossbowError Value
 castToBool v@(VBool _) = Right v
@@ -261,6 +271,7 @@ castToBool f@(VFunction _) = Left $ CastToCharError f
 castToBool i@(VIdentifier _) = Left $ CastToCharError i
 castToBool VNull = Right $ VBool True
 castToBool (VSet vs) = VSet . S.fromList <$> traverse castToBool (S.toList vs)
+castToBool (VMap vs) = VMap <$> traverse castToBool vs
 
 instance Ord Value where
   (VFunction _) <= _ = error "No Ord for functions"
@@ -288,6 +299,8 @@ instance Ord Value where
   (VList _) <= _ = error "Invalid Ord on list"
   _ <= (VSet _) = error "Invalid Ord on set"
   (VSet _) <= _ = error "Invalid Ord on set"
+  _ <= (VMap _) = error "Invalid Ord on map"
+  (VMap _) <= _ = error "Invalid Ord on map"
   (VBool a) <= (VBool b) = a <= b
 
 data Function = Function Text [Value]
@@ -329,6 +342,7 @@ instance Pretty Value where
   pretty (VIdentifier i) = i
   pretty VNull = ""
   pretty (VSet a) = pretty a
+  pretty (VMap a) = pretty a
 
 instance Pretty Function where
   pretty (Function name args) = "(" <> name <> " " <> pretty args <> ")"
@@ -338,6 +352,9 @@ instance Pretty a => Pretty [a] where
 
 instance Pretty a => Pretty (Set a) where
   pretty as = "{" <> T.intercalate "," (pretty <$> S.toList as) <> "}"
+
+instance (Pretty k, Pretty v) => Pretty (Map k v) where
+  pretty as = "{" <> T.intercalate "," [pretty k <> ": " <> pretty v | (k, v) <- M.toList as] <> "}"
 
 class PrettyTruncated a where
   prettyTruncated :: a -> Text
