@@ -110,6 +110,12 @@ main = do
   assertCrossbow "Set casting" "set [1,2,3] | == {1,2,3}"
   assertCrossbow "Set insertion" "{1,2,3} | + 4 | + 5 | == {1,2,3,4,5}"
   assertCrossbow "Set deletion" "{1,2,3} | delete 2 | == {1,3}"
+  assertCrossbow "Map intersect" "{'a':1, 'b':2} | intersection {'b': 3} | == {'b': 3}"
+  assertCrossbow "Map union" "{'a':1, 'b':2} | union {'c': 3} | == {'a':1, 'b': 2, 'c':3}"
+  assertCrossbow "Map difference" "{'a':1, 'b':2} | difference | {'b': 2} | == {'a':1}"
+  assertCrossbow "Map casting" "{'a':1, 'b':2} | list | sort | == [['a',1],['b',2]]"
+  assertCrossbow "Map insertion" "{'a':1} | insert 'b' 2 | == {'a':1, 'b':2}"
+  assertCrossbow "Map deletion" "{'a':1, 'b':2} | delete 'b' | == {'a':1}"
 
   assertEvaluatesTo "import statements" "import \"test/aoc.cb\" | d2 | sum | `*" (VInteger 1690020)
 

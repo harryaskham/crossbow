@@ -72,9 +72,10 @@ value =
         vIx,
         vBool,
         binding,
+        vMap, -- Map above lambdas
+        vSet, -- Set above lambdas
         vRange,
         vNumber,
-        vSet, -- Set above lambdas
         inParens value,
         vLambdaZeroArgs,
         vLambda,
@@ -194,7 +195,7 @@ mapWrap 0 f = f
 mapWrap n f = mapWrap (n - 1) (VFunction (Function "map" [f]))
 
 name :: P Text
-name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#`_")
+name = T.pack <$> many1 (noneOf "!{}[]()| \t\n,\"\'#`_:")
 
 -- Parses arbitrary operator names, which will be looked up later
 -- e.g. there's no parse-time guarantee that we're parsing something from builtins
@@ -217,3 +218,13 @@ binding = do
   case vM of
     Nothing -> return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n])
     Just v -> return $ VFunction (Function "bind" [VList $ VChar <$> T.unpack n, v])
+
+vMap :: P Value
+vMap = do
+  VMap . M.fromList <$> between (char '{') (char '}') (mapBinding `sepBy` ignoreSpaces (char ','))
+  where
+    mapBinding = do
+      k <- value
+      ignoreSpaces (char ':')
+      v <- value
+      return (k, v)

@@ -618,6 +618,7 @@ builtins =
             ( \case
                 [VList a, VList b] -> return $ Right . VList $ a `L.union` b
                 [VSet a, VSet b] -> return $ Right . VSet $ a `S.union` b
+                [VMap a, VMap b] -> return $ Right . VMap $ a `M.union` b
             )
       ),
       ( "intersection",
@@ -626,6 +627,7 @@ builtins =
             ( \case
                 [VList a, VList b] -> return $ Right . VList $ a `L.intersect` b
                 [VSet a, VSet b] -> return $ Right . VSet $ a `S.intersection` b
+                [VMap a, VMap b] -> return $ Right . VMap $ a `M.intersection` b
             )
       ),
       ( "difference",
@@ -634,13 +636,14 @@ builtins =
             ( \case
                 [VList a, VList b] -> return $ Right . VList $ a L.\\ b
                 [VSet a, VSet b] -> return $ Right . VSet $ a `S.difference` b
+                [VMap a, VMap b] -> return $ Right . VMap $ a `M.difference` b
             )
       ),
       ( "insert",
-        wrapImpl 2 $
+        wrapImpl 3 $
           HSImpl
             ( \case
-                [a, VSet b] -> return $ Right . VSet $ S.insert a b
+                [k, v, VMap m] -> return $ Right . VMap $ M.insert k v m
             )
       ),
       ( "delete",
@@ -649,6 +652,7 @@ builtins =
             ( \case
                 [a, VList b] -> return $ Right . VList $ a `L.delete` b
                 [a, VSet b] -> return $ Right . VSet $ a `S.delete` b
+                [a, VMap b] -> return $ Right . VMap $ a `M.delete` b
             )
       ),
       ( "list",
@@ -657,6 +661,7 @@ builtins =
             ( \case
                 [VList a] -> return $ Right . VList $ a
                 [VSet a] -> return $ Right . VList $ S.toList a
+                [VMap a] -> return $ Right . VList $ (\(a, b) -> VList [a, b]) <$> M.toList a
                 [v] -> return $ Right . VList $ [v]
             )
       ),

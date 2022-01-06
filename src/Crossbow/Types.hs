@@ -354,7 +354,7 @@ instance Pretty a => Pretty (Set a) where
   pretty as = "{" <> T.intercalate "," (pretty <$> S.toList as) <> "}"
 
 instance (Pretty k, Pretty v) => Pretty (Map k v) where
-  pretty as = "{" <> T.intercalate "," [pretty k <> ": " <> pretty v | (k, v) <- M.toList as] <> "}"
+  pretty as = "{" <> T.intercalate ", " [pretty k <> ": " <> pretty v | (k, v) <- M.toList as] <> "}"
 
 class PrettyTruncated a where
   prettyTruncated :: a -> Text
