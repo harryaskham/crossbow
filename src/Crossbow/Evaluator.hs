@@ -635,5 +635,30 @@ builtins =
                 [VList a, VList b] -> return $ Right . VList $ a L.\\ b
                 [VSet a, VSet b] -> return $ Right . VSet $ a `S.difference` b
             )
+      ),
+      ( "list",
+        wrapImpl 1 $
+          HSImpl
+            ( \case
+                [VList a] -> return $ Right . VList $ a
+                [VSet a] -> return $ Right . VList $ S.toList a
+                [v] -> return $ Right . VList $ [v]
+            )
+      ),
+      ( "set",
+        wrapImpl 1 $
+          HSImpl
+            ( \case
+                [VSet a] -> return $ Right . VSet $ a
+                [VList a] -> return $ Right . VSet $ S.fromList a
+                [v] -> return $ Right . VSet $ S.singleton v
+            )
+      ),
+      ( "sort",
+        wrapImpl 1 $
+          HSImpl
+            ( \case
+                [VList a] -> return . Right . VList $ sort a
+            )
       )
     ]
