@@ -4,23 +4,25 @@
 
 [[https://circleci.com/gh/harryaskham/crossbow][https://circleci.com/gh/harryaskham/crossbow.svg?style=svg]]
 
-A dynamic, interactive programming language.
+A dynamically and weakly typed interactive programming language.
 
 Solve problems using [[https://en.wikipedia.org/wiki/Morphism][arrows]].
 
 [[example.png]]
 
-/Solving the first day of Advent of Code 2021 two ways using Crossbow/
+/Solving the first few days of Advent of Code 2021 using Crossbow/
 
 * Features
 
 - Haskell, APL and POSIX inspired.
-- Forking pipeline style: ~1:10 | filter even | sum~ or ~filter (even) (sum 1:10)~
-- Encouraged to model with forks and joins: e.g. ~{$0|fork 2|[length,id]|[range 0, id]|monadic zip}~ is the ~enum~ function, where ~enum 1:10~ is ~[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]]~
+- Forking pipeline style: ~1:10 | filter (even) | sum~ or ~filter (even) (sum 1:10)~
+- Encouraged to model with forks and joins: e.g. ~{$0 | fork 2 | first {$0|length|range} | `zip}~ is the ~enum~ function, where ~enum 1:10~ is ~[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]]~
 - Dynamic typing: ~[1, "hi", [True]]~ is valid. Yes, that means runtime errors.
-- Applicative by default: ~[+1,+2]|[3,4]~ is ~[4,6]~
-- Lambdas: ~{$0|sum|(_+$1)}|1:10|5~ is ~60~
+- Applicative by default: ~[+ 1, + 2] | [3, 4]~ is ~[4, 6]~
+- Lambdas: ~{$0 | sum | + $1} | 1:10 | 5~ is ~60~
+- Indexing shorthand: ~_n~ is the function that takes the nth item from a list.
+- Mutable binding: ~a <- x~ binds the value of ~x~ to ~a~ and returns ~null~ to the next clause.
+  - Aliases to ~bind "a" x~ allowing programmatic binding and metaprogramming.
 - Curried functions by default
-  - Can be uncurried - made ~monadic~ (i.e. single-argument; in the APL sense of monadic) - e.g. ~[[1,2],[3,4]] | map (monadic +)~ is ~[3, 7]~
-- Partial application in any position with ~_~ placeholder: ~foldl _ 0 1:10 | +~ is ~55~
+  - Can be uncurried - made ~monadic~ (i.e. single-argument; in the APL sense of monadic) - e.g. ~[[1,2],[3,4]] | map (monadic +)~ is ~[3, 7]~. ~monadic~ is also aliased to ~`~ so  ~[[1,2],[3,4]] | map (~`+)~ is equivalent
 - ~aoc~ builtin for loading Advent of Code input :)
