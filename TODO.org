@@ -1,16 +1,6 @@
 #+TITLE: TODO
 
 - Do Next
-  - [ ] Sets
-  - [ ] Maps
-  - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
-    - VConst is the issue I think; const functions are not getting args propagated
-    - Still breakages with lambda evaluation
-  - [X] PrettyTruncated class
-  - [ ] Implement test suite in Crossbow instead; eval from inside Haskell harness
-  - [ ] rename builtins to namespace
-  - [ ] Lib is dynamically loaded with a default value
-    - or is this too slow?
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight' (on e.g. Text.Read)
@@ -19,14 +9,13 @@
       - [ ] inexhausive Instances (Semigroup)
       - [ ] OpImpl partiality
       - [ ] Finally take out all compiler warnings
-  - [X] import function that takes a path and runs it in the context
-  - [X] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
-  - [X] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
-  - [X] File format with spaces separation is ambiguous
-    - Could fix with value parens
-  - [X] Move AOC solutions to an external file
-    - Kind of working, just needs m
-  - [X] Tests for AOC use runFile
+  - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
+    - VConst is the issue I think; const functions are not getting args propagated
+    - Still breakages with lambda evaluation
+  - [ ] Implement test suite in Crossbow instead; eval from inside Haskell harness
+  - [ ] rename builtins to namespace
+  - [ ] Lib is dynamically loaded with a default value
+    - or is this too slow?
 - Language features
   - [ ] REPL options to switch between truncated / full printing
   - [ ] proper function definition w/ named args
@@ -45,6 +34,17 @@
   - [ ] Stack trace
   - [ ] range syntax with variable endpoints
     - for now use range function
+  - [X] Sets
+  - [X] Maps
+  - [X] PrettyTruncated class
+  - [X] import function that takes a path and runs it in the context
+  - [X] DeepEval doesn't know when to stop; we need to find a "fix" in our alias chain
+  - [X] What if 'value' can be clauses in parens? that would be our zero-value strict lambda
+  - [X] File format with spaces separation is ambiguous
+    - Could fix with value parens
+  - [X] Move AOC solutions to an external file
+    - Kind of working, just needs m
+  - [X] Tests for AOC use runFile
   - [X] Reader -> State, allowing builtins to change with execution
   - [X] HSImpl -> wrap with State
   - [X] mapbang for lambdas
