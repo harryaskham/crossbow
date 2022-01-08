@@ -1,6 +1,10 @@
 #+TITLE: TODO
 
 - Do Next
+  - [ ] Automemoization for everything at least in REPL
+    - by string hash
+    - for fast interation
+    - a :clear / :c command to undo this
   - [-] Remove all partial functions to stop interpreter crashes:
     - [-] Take out every:
       - [ ] fromRight' (on e.g. Text.Read)
@@ -9,26 +13,25 @@
       - [ ] inexhausive Instances (Semigroup)
       - [ ] OpImpl partiality
       - [ ] Finally take out all compiler warnings
-  - [ ] EvalF is a danger zone at the moment; bound lambda application must still be broken
-    - VConst is the issue I think; const functions are not getting args propagated
-    - Still breakages with lambda evaluation
+  - [ ] Pattern matching in lambdas; {$[a, [b]] | [b, a]} | [1, [2]] | == [2, 1]
+  - [ ] Lexical scope stack so that bindings are evaluated at the right depth and we can ascend upward looking for names
   - [ ] Implement test suite in Crossbow instead; eval from inside Haskell harness
-  - [ ] rename builtins to namespace
+    - add a crossbow test <testfile> command with builtin assertions and messages
+    - runTest also written in Crossbow
+  - [ ] rename builtins to namespace (but keep HSImpl builtins as builtins)
   - [ ] Lib is dynamically loaded with a default value
     - or is this too slow?
 - Language features
   - [ ] REPL options to switch between truncated / full printing
   - [ ] proper function definition w/ named args
     - should be okay to lean on substitution mechanism if Function stores the names to sub in order
-  - [ ] emacs mode
-  - [ ] lean into the lispiness; its also a lisp
+  - [ ] emacs mode; syntax, reserved words
+  - [ ] Better bootstrapping; List can be car/cdr and then we really do have a lisp
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
     - can circumvent this by wrapping in {} for now e.g. {[+1,+2]}
   - [ ] Let bindings; getting more and more useful
   - [ ] Binary with no args is repl, with args runs a source file
-  - [ ] Lexical scoping
   - [ ] Move the standard library to a module system
-  - [ ] Automemoization for everything
   - [ ] Named function definition
   - [ ] Shortcuts for referring to output of previous line / assignment
   - [ ] Stack trace
