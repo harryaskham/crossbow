@@ -5,7 +5,7 @@
     - by string hash
     - for fast interation
     - a :clear / :c command to undo this
-  - [-] Remove all partial functions to stop interpreter crashes:
+  - [-] Remove all partial functions to stop interpreter crashes
     - [-] Take out every:
       - [ ] fromRight' (on e.g. Text.Read)
       - [ ] withPrettyError
@@ -22,11 +22,14 @@
   - [ ] Lib is dynamically loaded with a default value
     - or is this too slow?
 - Language features
-  - [ ] REPL options to switch between truncated / full printing
+  - [ ] Tag values with parsing information (e.g. index of character) so that we can give nice error messages on failure
+  - [ ] :verbose :v REPL options to switch between truncated / full printing
   - [ ] proper function definition w/ named args
     - should be okay to lean on substitution mechanism if Function stores the names to sub in order
+    - workaround: {a <- $0 | b <- $1 | + a b}
   - [ ] emacs mode; syntax, reserved words
-  - [ ] Better bootstrapping; List can be car/cdr and then we really do have a lisp
+  - [ ] Better bootstrapping
+    - Write more of stdlib in crossbow
   - [ ] Treat a list full of functions as a function not just for application but also for e.g. folding, mapping
     - can circumvent this by wrapping in {} for now e.g. {[+1,+2]}
   - [ ] Let bindings; getting more and more useful
