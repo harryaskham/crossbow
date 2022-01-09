@@ -19,9 +19,9 @@
     - add a crossbow test <testfile> command with builtin assertions and messages
     - runTest also written in Crossbow
   - [ ] rename builtins to namespace (but keep HSImpl builtins as builtins)
-  - [ ] Lib is dynamically loaded with a default value
-    - or is this too slow?
+  - [X] Lib is dynamically loaded with a default value
 - Language features
+  - [ ] Escaping inside string literals (no way to do \n at the mo)
   - [ ] Tag values with parsing information (e.g. index of character) so that we can give nice error messages on failure
   - [ ] :verbose :v REPL options to switch between truncated / full printing
   - [ ] proper function definition w/ named args
