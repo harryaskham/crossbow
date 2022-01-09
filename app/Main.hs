@@ -11,6 +11,6 @@ main = do
   case args of
     ["repl"] -> repl
     [path] -> do
-      _ <- runStateT (runFile path) (ProgramContext program builtins)
+      _ <- runStateT (runFile path) (ProgramContext program builtins False)
       return ()
     _ -> putTextLn "'crossbow <path>' to execute a file; 'crossbow repl' to enter the REPL"

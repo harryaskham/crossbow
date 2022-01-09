@@ -23,7 +23,8 @@ type Builtins = Map Text OpImpl
 
 data ProgramContext = ProgramContext
   { _programParser :: ProgramParser,
-    _builtins :: Builtins
+    _builtins :: Builtins,
+    _stdLibLoaded :: Bool
   }
 
 type CrossbowEval = State ProgramContext

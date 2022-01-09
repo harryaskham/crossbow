@@ -30,6 +30,20 @@ debugParser = False
 debugEvaluation :: Bool
 debugEvaluation = False
 
+stdLibPath :: FilePath
+stdLibPath = "lib.cb"
+
+loadStdLib :: Eval ()
+loadStdLib = do
+  stdLibLoaded <- gets _stdLibLoaded
+  unless stdLibLoaded do
+    (ProgramContext b pp _) <- get
+    put $ ProgramContext b pp True
+    e <- runFile stdLibPath
+    case e of
+      Left e -> error (pretty e)
+      Right _ -> return ()
+
 runFile :: FilePath -> Eval (Either CrossbowError [Value])
 runFile path = do
   t <- T.pack <$> readFile path
@@ -50,6 +64,7 @@ debugParseProgram t = do
 
 compileInternal :: Bool -> Text -> Eval (Either CrossbowError [Value])
 compileInternal doPrint t = do
+  loadStdLib
   when debugParser (debugParseProgram t)
   pE <- parseProgram t
   case pE of
@@ -145,8 +160,8 @@ compileLambda lambda@(VLambda clauses) =
             )
     -- Register the lambda with the namespace
     when debugEvaluation (print $ "Compiled lambda with # args: " <> show (lambdaName, nArgs))
-    (ProgramContext pp builtins) <- get
-    put (ProgramContext pp (M.insert lambdaName impl builtins))
+    (ProgramContext pp builtins stdLibLoaded) <- get
+    put (ProgramContext pp (M.insert lambdaName impl builtins) stdLibLoaded)
     return . Right $ VFunction (Function lambdaName [])
 compileLambda v = return . Left $ NonLambdaCompilationError v
 
@@ -219,10 +234,13 @@ runCBImpl cbF args = do
   pE <- compile cbF
   case pE of
     Left e -> return $ Left e
-    Right [f] -> do
-      result <- foldM (\acc x -> withPrettyError <$> apply acc x) f args
-      deepEval result
+    Right [vf] -> applyCBFunction vf args
     Right _ -> error "Can't handle CBImpl with more than one return value yet"
+
+applyCBFunction :: Value -> [Value] -> Eval (Either CrossbowError Value)
+applyCBFunction vf args = do
+  result <- foldM (\acc x -> withPrettyError <$> apply acc x) vf args
+  deepEval result
 
 runHSImpl :: ([Value] -> Eval (Either CrossbowError Value)) -> [Value] -> Eval (Either CrossbowError Value)
 runHSImpl hsF args = do
@@ -246,10 +264,11 @@ evalF vf@(VFunction (Function name args)) = do
           HSImpl hsF -> runHSImpl hsF args
           CBImpl cbF -> runCBImpl cbF args
           ConstImpl constV ->
-            -- For constant (bound) implementations, we need to check if this is a stored compileLambda
-            -- if it is, we need to continue evaluation.
             case constV of
-              (VFunction (Function name' _)) -> evalF (VFunction (Function name' args))
+              -- For constant (bound) implementations, we need to check if this is a stored compileLambda
+              -- if it is, we need to continue evaluation.
+              -- (VFunction (Function name' _)) -> evalF (VFunction (Function name' args))
+              vf@(VFunction _) -> applyCBFunction vf args
               v -> return $ Right v
       case resultE of
         Left e -> do
@@ -318,6 +337,7 @@ wrapImpl n (HSImpl f) =
           else return . Left $ ValenceError (length args) n
     )
 
+-- TODO: Redefine as much of the below as possible inside lib.cs
 builtins :: Map Text OpImpl
 builtins =
   M.fromList
@@ -338,9 +358,6 @@ builtins =
       (":", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ vCons a b)),
       ("min", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ min a b)),
       ("max", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ max a b)),
-      ("minOn", CBImpl "{map $0 [$1, $2]|monadic <= |if|$1|$2}"),
-      ("maxOn", CBImpl "{map $0 [$1, $2]|monadic > |if|$1|$2}"),
-      -- TODO: Redefine all the below using crossbow folds, maps, filters
       ("id", wrapImpl 1 $ HSImpl (\[a] -> return . Right $ a)),
       ("const", wrapImpl 2 $ HSImpl (\[a, _] -> return . Right $ a)),
       ("cons", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ vCons a b)),
@@ -353,11 +370,6 @@ builtins =
       -- TODO: Make zip variadic
       ("zip", wrapImpl 2 $ HSImpl (\[VList as, VList bs] -> return . Right $ VList ((\(a, b) -> VList [a, b]) <$> zip as bs))),
       ("zip3", wrapImpl 3 $ HSImpl (\[VList as, VList bs, VList cs] -> return . Right $ VList ((\(a, b, c) -> VList [a, b, c]) <$> zip3 as bs cs))),
-      ("pairs", CBImpl "{$0|fork 2|[id, drop 1]|monadic zip}"),
-      ("square", CBImpl "{$0 | fork (length $0)}"),
-      ("enum", CBImpl "{$0|fork 2|[length,id]|[range 0, id]|monadic zip}"),
-      ("lengthy", CBImpl "{$1|length|(== $0)}"),
-      ("windows", CBImpl "{$1|tails|take $0|transpose|take ((1 + length $1) - $0)}"),
       ( "chunks",
         wrapImpl 2 $
           HSImpl (\[VInteger a, VList as] -> return . Right $ VList (VList <$> chunksOf (fromInteger a) as))
@@ -376,12 +388,6 @@ builtins =
                 return . Right $ VList $ V.toList vas'
             )
       ),
-      ("first", CBImpl "nap 0"),
-      ("second", CBImpl "nap 1"),
-      ("third", CBImpl "nap 2"),
-      ("fst", CBImpl "ix 0"),
-      ("snd", CBImpl "ix 1"),
-      ("thd", CBImpl "ix 2"),
       -- TODO variadic
       ("range", wrapImpl 2 $ HSImpl (\[VInteger a, VInteger b] -> return . Right $ VList $ VInteger <$> [a .. b])),
       ( "map",
@@ -396,7 +402,6 @@ builtins =
                in map
             )
       ),
-      ("count", CBImpl "{filter $0 $1 | length}"),
       ( "filter",
         wrapImpl 2 $
           HSImpl
@@ -422,18 +427,6 @@ builtins =
             )
       ),
       ("if", wrapImpl 3 $ HSImpl (\[p, a, b] -> return . Right $ let (VBool p') = withPrettyError $ castToBool p in if p' then a else b)),
-      ("aoc", CBImpl "{((\"test/aoc_input/\" ++ (string $0)) ++ \".txt\") | read}"),
-      ("sum", CBImpl "foldl|+|0"),
-      ("odd", CBImpl "{mod $0 2|bool}"),
-      ("even", CBImpl "{odd $0|not}"),
-      ("not", CBImpl "{if | $0 | False | True}"),
-      ("maximum", CBImpl "foldl1 max"),
-      ("minimum", CBImpl "foldl1 min"),
-      ("maximumOn", CBImpl "{$1 | foldl1 (maxOn $0)}"),
-      ("minimumOn", CBImpl "{$1 | foldl1 (minOn $0)}"),
-      ("mode", CBImpl "{counts|maximumOn snd|fst}"),
-      ("antimode", CBImpl "{counts|minimumOn snd|fst}"),
-      ("length", CBImpl "{map (const 1) | sum}"),
       ( "foldl",
         wrapImpl 3 $
           HSImpl
@@ -498,10 +491,6 @@ builtins =
                     xs
             )
       ),
-      ("foldl1", CBImpl "{foldl | $0 | head $1 | tail $1}"),
-      ("scanl1", CBImpl "{scanl | $0 | head $1 | tail $1}"),
-      ("fold", CBImpl "foldl"),
-      ("scan", CBImpl "scanl"),
       ("transpose", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ let unlist (VList l) = l in VList $ VList <$> transpose (unlist <$> as))),
       -- TODO: Make flip work with other valences
       ( "flip",
@@ -514,7 +503,6 @@ builtins =
                   applyF f' a BindFromRight
             )
       ),
-      ("reverse", CBImpl "foldl (flip cons) [] _"),
       ( "ap",
         wrapImpl 2 $
           HSImpl
@@ -542,7 +530,6 @@ builtins =
       ),
       ("lines", wrapImpl 1 $ HSImpl (\[VList t] -> return . Right $ let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.lines (unchar <$> t))))),
       ("words", wrapImpl 1 $ HSImpl (\[VList t] -> return . Right $ let unchar (VChar c) = c in VList (VList <$> (VChar <$$> ST.words (unchar <$> t))))),
-      ("ints", CBImpl "{lines|int}"),
       ("int", wrapImpl 1 $ HSImpl (\[a] -> return . Right $ withPrettyError . castToInt $ a)),
       ("double", wrapImpl 1 $ HSImpl (\[a] -> return . Right $ withPrettyError . castToDouble $ a)),
       ("char", wrapImpl 1 $ HSImpl (\[a] -> return . Right $ withPrettyError . castToChar $ a)),
@@ -589,8 +576,8 @@ builtins =
             ( \[VList cs, v] -> do
                 let unchar (VChar c) = c
                     k = T.pack $ unchar <$> cs
-                ProgramContext pp builtins <- get
-                put (ProgramContext pp (M.insert k (ConstImpl v) builtins))
+                ProgramContext pp builtins stdLibLoaded <- get
+                put (ProgramContext pp (M.insert k (ConstImpl v) builtins) stdLibLoaded)
                 return $ Right VNull
             )
       ),

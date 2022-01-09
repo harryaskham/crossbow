@@ -14,7 +14,7 @@ assertCrossbow msg source = assertEvaluatesTo msg source (VBool True)
 assertEvaluatesTo :: Text -> Text -> Value -> IO ()
 assertEvaluatesTo msg source expected = do
   print msg
-  let programContext = ProgramContext program builtins
+  let programContext = ProgramContext program builtins False
   pE <- evalStateT (compile source) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (msg <> "\nFailed with:\n" <> pretty e)
@@ -23,7 +23,7 @@ assertEvaluatesTo msg source expected = do
 assertFileEvaluatesTo :: FilePath -> [Value] -> IO ()
 assertFileEvaluatesTo path expected = do
   print path
-  let programContext = ProgramContext program builtins
+  let programContext = ProgramContext program builtins False
   pE <- evalStateT (runFile path) programContext
   case pE of
     Left e -> assertFailure $ T.unpack (T.pack path <> "\nFailed with:\n" <> pretty e)

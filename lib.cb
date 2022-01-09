@@ -1,0 +1,32 @@
+minOn <- {map $0 [$1, $2]|monadic <= |if|$1|$2}
+maxOn <- {map $0 [$1, $2]|monadic > |if|$1|$2}
+pairs <- {$0|fork 2|[id, drop 1]|monadic zip}
+square <- {$0 | fork (length $0)}
+enum <- {$0|fork 2|[length,id]|[range 0, id]|monadic zip}
+lengthy <- {$1|length|(== $0)}
+windows <- {$1|tails|take $0|transpose|take ((1 + length $1) - $0)}
+first <- nap 0
+second <- nap 1
+third <- nap 2
+fst <- ix 0
+snd <- ix 1
+thd <- ix 2
+count <- {filter $0 $1 | length}
+aoc <- {(("test/aoc_input/" ++ (string $0)) ++ ".txt") | read}
+sum <- {foldl|+|0|$0}
+odd <- {mod $0 2|bool}
+even <- {odd $0|not}
+not <- {if | $0 | False | True}
+maximum <- {foldl1 | max | $0}
+minimum <- {foldl1 | min | $0}
+maximumOn <- {$1 | foldl1 (maxOn $0)}
+minimumOn <- {$1 | foldl1 (minOn $0)}
+mode <- {counts|maximumOn snd|fst}
+antimode <- {counts|minimumOn snd|fst}
+length <- {map (const 1) | sum}
+foldl1 <- {foldl | $0 | head $1 | tail $1}
+scanl1 <- {scanl | $0 | head $1 | tail $1}
+fold <- foldl
+scan <- scanl
+reverse <- {foldl | flip cons | [] | $0}
+ints <- {lines|int}

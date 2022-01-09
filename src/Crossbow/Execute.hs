@@ -33,10 +33,14 @@ repl = do
   _ <-
     flip evalStateT programContext
       . runInputTWithPrefs prefs settings
-      $ loop
+      $ runRepl
   print "Exiting"
   where
-    programContext = ProgramContext program builtins
+    programContext = ProgramContext program builtins False
+    runRepl :: (InputT (StateT ProgramContext IO) ())
+    runRepl = do
+      lift loadStdLib
+      loop
     loop :: (InputT (StateT ProgramContext IO) ())
     loop = do
       inputM <- getInputLine "|-> "
