@@ -341,7 +341,8 @@ wrapImpl n (HSImpl f) =
 builtins :: Map Text OpImpl
 builtins =
   M.fromList
-    [ ("+", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ a + b)),
+    [ ("null", ConstImpl VNull),
+      ("+", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ a + b)),
       ("++", wrapImpl 2 $ HSImpl (\[VList a, VList b] -> return . Right $ VList $ a ++ b)),
       ("*", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ a * b)),
       ("^", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ a ^ b)),
@@ -355,17 +356,10 @@ builtins =
       ("<", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ VBool $ a < b)),
       (">=", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ VBool $ a >= b)),
       (">", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ VBool $ a > b)),
-      (":", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ vCons a b)),
-      ("min", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ min a b)),
-      ("max", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ max a b)),
-      ("id", wrapImpl 1 $ HSImpl (\[a] -> return . Right $ a)),
-      ("const", wrapImpl 2 $ HSImpl (\[a, _] -> return . Right $ a)),
       ("cons", wrapImpl 2 $ HSImpl (\[a, b] -> return . Right $ vCons a b)),
       ("ix", wrapImpl 2 $ HSImpl (\[VInteger a, VList b] -> return . Right $ b !! fromInteger a)),
       ("drop", wrapImpl 2 $ HSImpl (\[VInteger n, VList as] -> return . Right $ VList (drop (fromIntegral n) as))),
       ("take", wrapImpl 2 $ HSImpl (\[VInteger n, VList as] -> return . Right $ VList (take (fromIntegral n) as))),
-      ("head", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ L.head as)),
-      ("tail", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ VList $ L.tail as)),
       ("tails", wrapImpl 1 $ HSImpl (\[VList as] -> return . Right $ VList $ VList <$> L.tails as)),
       -- TODO: Make zip variadic
       ("zip", wrapImpl 2 $ HSImpl (\[VList as, VList bs] -> return . Right $ VList ((\(a, b) -> VList [a, b]) <$> zip as bs))),
