@@ -372,6 +372,7 @@ builtins =
         wrapImpl 2 $
           HSImpl (\[VList a, VList as] -> return . Right $ VList (VList <$> splitOn a as))
       ),
+      -- TODO: need to handle escaped characters
       ( "paragraphs",
         wrapImpl 1 $
           HSImpl (\[VList as] -> return . Right $ VList (VList <$> splitOn [VChar '\n', VChar '\n'] as))
