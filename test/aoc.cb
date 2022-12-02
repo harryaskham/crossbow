@@ -3,15 +3,15 @@
 # Day 1
 
 # Part 1
-aoc 1 | ints | pairs | count `<
+aoc 2021 1 | ints | pairs | count `<
 
 # Part 2
-aoc 1 | ints | windows 3 | sum! | pairs | count `<
+aoc 2021 1 | ints | windows 3 | sum! | pairs | count `<
 
 
 # Day 2
 sub <- {case | head $0 | [['u', negate [0, _1 $0]], ['d', [0, _1 $0]], ['f', [_1 $0, 0]]]}
-d2 <- (aoc 2 | lines | {words | second int | first fst}! | sub!)
+d2 <- (aoc 2021 2 | lines | {words | second int | first fst}! | sub!)
 
 # Part 1
 d2 | sum | `*
@@ -21,7 +21,7 @@ d2 | fold {$0 | [+ (fst $1), + (* (fst $1) (thd $0)), + (snd $1)]} [0, 0, 0] | t
 
 
 # Day 3
-d3 <- (aoc 3 | lines | int!!)
+d3 <- (aoc 2021 3 | lines | int!!)
 favouring <- {f <- $0 | m <- f $2 | $2 | counts | snd! | `== | if | $1 | m}
 step <- {i <- $2 | map (_i) $1 | $0 | m <- | filter {== | m | _(i) $0} $1}
 
@@ -34,7 +34,7 @@ d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
 
 # Day 4 - TODO: flip map, run haskell soln
 board <- {take 5 | int | {enum | assoc}! | enum | assoc | {++ [$0] | [{}]}}
-d4 <- (aoc 4 | lines | fork 2 | [take 2, drop 2] | first {head | splitOn "," | int} | second { words! | chunks 6 | board!})
+d4 <- (aoc 2021 4 | lines | fork 2 | [take 2, drop 2] | first {head | splitOn "," | int} | second { words! | chunks 6 | board!})
 #_0 d4
 #_1 d4 | take 3
 
@@ -44,7 +44,7 @@ d4 <- (aoc 4 | lines | fork 2 | [take 2, drop 2] | first {head | splitOn "," | i
 # Day 1
 
 # Part 1
-aoc2022 1 | paragraphs | ints! | sum! | maximum
+aoc 2022 1 | paragraphs | ints! | sum! | maximum
 
 # Part 2
-aoc2022 1 | paragraphs | ints! | sum! | sort | reverse | take 3 | sum
+aoc 2022 1 | paragraphs | ints! | sum! | sort | reverse | take 3 | sum

@@ -3,8 +3,7 @@ id <- {null|$0}
 const <- {$1|null|$0}
 
 # Parsing and IO
-aoc <- {(("test/aoc_input/" ++ (string $0)) ++ ".txt") | read}
-aoc2022 <- {(("../advent/2022/input/" ++ (string $0)) ++ ".txt") | read}
+aoc <- {(((("test/aoc_input/" ++ (string $0)) ++ "/") ++ (string $1)) ++ ".txt") | read}
 ints <- {lines|int}
 
 # Bools and Predicates
