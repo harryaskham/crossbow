@@ -4,6 +4,7 @@ const <- {$1|null|$0}
 
 # Parsing and IO
 aoc <- {(("test/aoc_input/" ++ (string $0)) ++ ".txt") | read}
+aoc2022 <- {(("../advent/2022/input/" ++ (string $0)) ++ ".txt") | read}
 ints <- {lines|int}
 
 # Bools and Predicates
@@ -39,6 +40,7 @@ pairs <- {$0|fork 2|[id, drop 1]|monadic zip}
 square <- {$0 | fork (length $0)}
 enum <- {$0|fork 2|[length,id]|[range 0, id]|monadic zip}
 windows <- {$1|tails|take $0|transpose|take ((1 + length $1) - $0)}
+clauses <- {$0|splitOn "\n"}
 
 # Accessor / Setter Aliases
 first <- nap 0

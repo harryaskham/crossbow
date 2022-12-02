@@ -1,3 +1,5 @@
+# 2021
+
 # Day 1
 
 # Part 1
@@ -35,3 +37,14 @@ board <- {take 5 | int | {enum | assoc}! | enum | assoc | {++ [$0] | [{}]}}
 d4 <- (aoc 4 | lines | fork 2 | [take 2, drop 2] | first {head | splitOn "," | int} | second { words! | chunks 6 | board!})
 #_0 d4
 #_1 d4 | take 3
+
+
+# 2022
+
+# Day 1
+
+# Part 1
+aoc2022 1 | paragraphs | ints! | sum! | maximum
+
+# Part 2
+aoc2022 1 | paragraphs | ints! | sum! | sort | reverse | take 3 | sum

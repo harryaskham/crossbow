@@ -128,7 +128,7 @@ main = do
       VInteger 1690020,
       VInteger 1408487760,
       VInteger 3320834,
-      VInteger 4481199
+      VInteger 4481199,
       --VInteger 35670
       --VInteger 22704
       --VInteger 6225
@@ -173,4 +173,8 @@ main = do
       --VInteger 31521119151421
       --VInteger 458
       --Merry Christmas!\"" VText "Merry Christmas!"
+
+      -- 2022
+      VInteger 71023,
+      VInteger 206289
     ]

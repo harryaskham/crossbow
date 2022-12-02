@@ -10,6 +10,7 @@ import Data.Foldable.Extra (foldrM)
 import Data.List ((!!))
 import Data.List qualified as L
 import Data.List.Extra (chunksOf)
+import Data.List.Split (splitOn)
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.String qualified as ST
@@ -17,7 +18,6 @@ import Data.Text qualified as T
 import Data.Text.Read (decimal, double, signed)
 import Data.Text.Read qualified as TR
 import Data.Vector qualified as V
-import Extra (splitOn)
 import Language.Haskell.TH.Ppr (parensIf)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (newStdGen, randomRs)
@@ -371,6 +371,10 @@ builtins =
       ( "splitOn",
         wrapImpl 2 $
           HSImpl (\[VList a, VList as] -> return . Right $ VList (VList <$> splitOn a as))
+      ),
+      ( "paragraphs",
+        wrapImpl 1 $
+          HSImpl (\[VList as] -> return . Right $ VList (VList <$> splitOn [VChar '\n', VChar '\n'] as))
       ),
       ( "nap",
         wrapImpl 3 $
