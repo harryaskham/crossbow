@@ -1,0 +1,92 @@
+[
+ {
+  "input": "1:10 | filter (even) | sum",
+  "output": "30",
+  "crashed": false
+ },
+ {
+  "input": "[+ 1, + 2] | [3, 4]",
+  "output": "[4,6]",
+  "crashed": false
+ },
+ {
+  "input": "{$0 | sum | + $1} | 1:10 | 5",
+  "output": "60",
+  "crashed": false
+ },
+ {
+  "input": "enum 1:10",
+  "output": "[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]]",
+  "crashed": false
+ },
+ {
+  "input": "[[1,2],[3,4]] | map (`+)",
+  "output": "[3,7]",
+  "crashed": false
+ },
+ {
+  "input": "[[1,2],[3,4]] | sum!",
+  "output": "[3,7]",
+  "crashed": false
+ },
+ {
+  "input": "[1, \"hi\", [True]]",
+  "output": "[1,\"hi\",[True]]",
+  "crashed": false
+ },
+ {
+  "input": "_2 [10, 20, 30]",
+  "output": "30",
+  "crashed": false
+ },
+ {
+  "input": "1:3 | fork 2",
+  "output": "[[1,2,3],[1,2,3]]",
+  "crashed": false
+ },
+ {
+  "input": "pairs 1:5",
+  "output": "[[1,2],[2,3],[3,4],[4,5]]",
+  "crashed": false
+ },
+ {
+  "input": "windows 3 1:6",
+  "output": "[[1,2,3],[2,3,4],[3,4,5],[4,5,6]]",
+  "crashed": false
+ },
+ {
+  "input": "[3, 5, 4, 6, 9] | pairs",
+  "output": "[[3,5],[5,4],[4,6],[6,9]]",
+  "crashed": false
+ },
+ {
+  "input": "[3, 5, 4, 6, 9] | pairs | count `<",
+  "output": "3",
+  "crashed": false
+ },
+ {
+  "input": "[3, 5, 4, 6, 9] | windows 3",
+  "output": "[[3,5,4],[5,4,6],[4,6,9]]",
+  "crashed": false
+ },
+ {
+  "input": "[3, 5, 4, 6, 9] | windows 3 | sum!",
+  "output": "[12,15,19]",
+  "crashed": false
+ },
+ {
+  "input": "[3, 5, 4, 6, 9] | windows 3 | sum! | pairs | count `<",
+  "output": "2",
+  "crashed": false
+ },
+ {
+  "input": "nosuchthing 3",
+  "output": "Evaluation error: \"No value named: nosuchthing\"",
+  "crashed": false
+ },
+ {
+  "input": "filter (even) (sum 1:10)",
+  "output": "crossbow: src/Crossbow/Evaluator.hs:(407,19)-(415,79): Non-exhaustive patterns in function filter",
+  "crashed": true
+ }
+]
