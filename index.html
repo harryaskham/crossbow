@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crossbow · a pipeline language for solving puzzles</title>
+<meta name="description" content="Crossbow is a small, dynamically typed programming language written in Haskell for solving puzzles interactively: values flow through pipelines of curried functions, lists of functions apply element-wise, and its standard library is written in Crossbow. How it reads and runs, with output from the real interpreter.">
+<meta name="theme-color" content="#f3efe6">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+<nav class="topbar" aria-label="Site">
+  <a href="https://a.skh.am/all/">a.skh.am/all</a><span aria-hidden="true">/</span><span>crossbow</span>
+  <a class="src" href="https://github.com/harryaskham/crossbow">Source on GitHub</a>
+</nav>
+
+<main id="main">
+<header class="intro">
+  <h1>Crossbow</h1>
+  <p class="lede">A small, dynamically typed programming language for solving puzzles at an interactive prompt, written in Haskell in late 2021. A program is a pipeline: each clause takes the previous result as its next argument, functions are curried, and a list of functions applies element-wise, so most programs need no variables at all.</p>
+  <p>Its README calls it an experimental personal project, not intended for general use, and that is the spirit of this page: how it reads and how it runs, with every output below produced by the interpreter, built from the repository with GHC 9.10.</p>
+</header>
+
+<section class="part" aria-labelledby="h-read">
+  <h2 id="h-read">Reading Crossbow</h2>
+  <figure>
+    <div class="fig" tabindex="0">
+      <!-- fig:pipeline -->
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 260" width="940" height="260" role="img" aria-labelledby="pipeline-t pipeline-d">
+<title id="pipeline-t">A pipeline, stage by stage</title>
+<desc id="pipeline-d">Two pipelines over the list [3, 5, 4, 6, 9], with each intermediate value as Crossbow prints it. The first, pairs then count with a backtick-uncurried &lt;, turns the list into neighbouring pairs [[3,5],[5,4],[4,6],[6,9]] and counts the pairs that increase: 3. The second takes sliding windows of three, [[3,5,4],[5,4,6],[4,6,9]], sums each with sum! (map sum), [12,15,19], and then counts increases the same way: 2.</desc>
+<defs><marker id="pipeline-tip-ink" class="k-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0 1L10 5L0 9z"/></marker></defs>
+<g class="k-ink"><path class="edge" d="M185.0 70.0 L240.0 70.0" stroke-width="1.5" marker-end="url(#pipeline-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M520.0 70.0 L625.0 70.0" stroke-width="1.5" marker-end="url(#pipeline-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M185.0 190.0 L235.0 190.0" stroke-width="1.5" marker-end="url(#pipeline-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M485.0 190.0 L545.0 190.0" stroke-width="1.5" marker-end="url(#pipeline-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M695.0 190.0 L775.0 190.0" stroke-width="1.5" marker-end="url(#pipeline-tip-ink)"/></g>
+<g class="k-ink"><rect class="shadow" x="19.0" y="54.0" width="170.0" height="40.0"/><rect class="node" x="15.0" y="50.0" width="170.0" height="40.0" rx="1.5"/><text x="100.0" y="75.0" font-size="15" text-anchor="middle" class="lbl m">[3, 5, 4, 6, 9]</text></g>
+<g class="k-b"><rect class="shadow" x="244.0" y="46.0" width="280.0" height="56.0"/><rect class="node" x="240.0" y="42.0" width="280.0" height="56.0" rx="1.5"/><text x="380.0" y="67.0" font-size="15" text-anchor="middle" class="lbl m">[[3,5],[5,4],[4,6],[6,9]]</text><text x="380.0" y="84.0" font-size="12.5" text-anchor="middle" class="sub">| pairs</text></g>
+<g class="k-accent"><rect class="shadow" x="629.0" y="46.0" width="150.0" height="56.0"/><rect class="node" x="625.0" y="42.0" width="150.0" height="56.0" rx="1.5"/><text x="700.0" y="67.0" font-size="15" text-anchor="middle" class="lbl m">3</text><text x="700.0" y="84.0" font-size="12.5" text-anchor="middle" class="sub">| count `&lt;</text></g>
+<g class="k-ink"><rect class="shadow" x="19.0" y="174.0" width="170.0" height="40.0"/><rect class="node" x="15.0" y="170.0" width="170.0" height="40.0" rx="1.5"/><text x="100.0" y="195.0" font-size="15" text-anchor="middle" class="lbl m">[3, 5, 4, 6, 9]</text></g>
+<g class="k-b"><rect class="shadow" x="239.0" y="166.0" width="250.0" height="56.0"/><rect class="node" x="235.0" y="162.0" width="250.0" height="56.0" rx="1.5"/><text x="360.0" y="187.0" font-size="15" text-anchor="middle" class="lbl m">[[3,5,4],[5,4,6],[4,6,9]]</text><text x="360.0" y="204.0" font-size="12.5" text-anchor="middle" class="sub">| windows 3</text></g>
+<g class="k-b"><rect class="shadow" x="549.0" y="166.0" width="150.0" height="56.0"/><rect class="node" x="545.0" y="162.0" width="150.0" height="56.0" rx="1.5"/><text x="620.0" y="187.0" font-size="15" text-anchor="middle" class="lbl m">[12,15,19]</text><text x="620.0" y="204.0" font-size="12.5" text-anchor="middle" class="sub">| sum!</text></g>
+<g class="k-accent"><rect class="shadow" x="779.0" y="166.0" width="150.0" height="56.0"/><rect class="node" x="775.0" y="162.0" width="150.0" height="56.0" rx="1.5"/><text x="850.0" y="187.0" font-size="15" text-anchor="middle" class="lbl m">2</text><text x="850.0" y="204.0" font-size="12.5" text-anchor="middle" class="sub">| pairs | count `&lt;</text></g>
+</svg>
+<!-- /fig -->
+    </div>
+    <figcaption><b>Data flows left to right.</b> <code>pairs</code> and <code>windows</code> come from the standard library; <code>`&lt;</code> is <code>&lt;</code> taking one pair as its two arguments.</figcaption>
+  </figure>
+  <div class="table-wrap" tabindex="0">
+    <!-- gen:examples -->
+<table class="ex"><caption>Each line run by the interpreter (scripts/site/capture.py)</caption><thead><tr><th scope="col">Input</th><th scope="col">Output</th><th scope="col"></th></tr></thead><tbody><tr><td><code>1:10 | filter (even) | sum</code></td><td><code>30</code></td><td class="note">a pipeline: each clause takes the previous result</td></tr><tr><td><code>[+ 1, + 2] | [3, 4]</code></td><td><code>[4,6]</code></td><td class="note">a list of functions applies element-wise</td></tr><tr><td><code>{$0 | sum | + $1} | 1:10 | 5</code></td><td><code>60</code></td><td class="note">a lambda with two arguments</td></tr><tr><td><code>enum 1:10</code></td><td><code>[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]]</code></td><td class="note">enum, from the standard library</td></tr><tr><td><code>[[1,2],[3,4]] | map (`+)</code></td><td><code>[3,7]</code></td><td class="note">`+ takes one list of two arguments</td></tr><tr><td><code>[[1,2],[3,4]] | sum!</code></td><td><code>[3,7]</code></td><td class="note">sum! is map sum</td></tr><tr><td><code>[1, &quot;hi&quot;, [True]]</code></td><td><code>[1,&quot;hi&quot;,[True]]</code></td><td class="note">lists may mix types</td></tr><tr><td><code>_2 [10, 20, 30]</code></td><td><code>30</code></td><td class="note">_n takes the item at index n</td></tr><tr><td><code>1:3 | fork 2</code></td><td><code>[[1,2,3],[1,2,3]]</code></td><td class="note">fork copies a value</td></tr><tr><td><code>nosuchthing 3</code></td><td><code>Evaluation error: &quot;No value named: nosuchthing&quot;</code></td><td class="note">an unknown name is a clean error</td></tr></tbody></table>
+<!-- /gen -->
+  </div>
+</section>
+
+<section class="part" aria-labelledby="h-aoc">
+  <h2 id="h-aoc">Advent of Code in a few lines</h2>
+  <div class="cols">
+    <div>
+      <p>Crossbow was written to solve Advent of Code, and <code>test/aoc.cb</code> solves the first days of 2021. Day 1 is the pipeline in the figure above, applied to the puzzle input: <code>aoc 2021 1</code> reads the day's input, <code>ints</code> parses one number per line, and each part is one line.</p>
+      <p>Day 2 shows the other tools: <code>&lt;-</code> binds a name, <code>case</code> picks a branch by the command's first letter, <code>!</code> maps a function over a list, and <code>fold</code> threads a three-part state through the commands. Day 3 defines its own higher-order helpers, <code>favouring</code> and <code>step</code>, as lambdas.</p>
+      <!-- gen:aoc-note -->
+<p class="note">Running this file prints 8 answers in 3.5 seconds (the answers depend on personal puzzle inputs, so they are not shown).</p>
+<!-- /gen -->
+    </div>
+  </div>
+  <!-- gen:aoc-2021 -->
+<pre tabindex="0"><code># Day 1
+
+# Part 1
+aoc 2021 1 | ints | pairs | count `&lt;
+
+# Part 2
+aoc 2021 1 | ints | windows 3 | sum! | pairs | count `&lt;
+
+
+# Day 2
+sub &lt;- {case | head $0 | [[&#x27;u&#x27;, negate [0, _1 $0]], [&#x27;d&#x27;, [0, _1 $0]], [&#x27;f&#x27;, [_1 $0, 0]]]}
+d2 &lt;- (aoc 2021 2 | lines | {words | second int | first fst}! | sub!)
+
+# Part 1
+d2 | sum | `*
+
+# Part 2
+d2 | fold {$0 | [+ (fst $1), + (* (fst $1) (thd $0)), + (snd $1)]} [0, 0, 0] | take 2 | `*
+
+
+# Day 3
+d3 &lt;- (aoc 2021 3 | lines | int!!)
+favouring &lt;- {f &lt;- $0 | m &lt;- f $2 | $2 | counts | snd! | `== | if | $1 | m}
+step &lt;- {i &lt;- $2 | map (_i) $1 | $0 | m &lt;- | filter {== | m | _(i) $0} $1}
+
+# Part 1
+d3 | transpose | fork 2 | [mode!, antimode!] | bits! | `*
+
+# Part 2
+[((mode) favouring 1), ((antimode) favouring 0)] | {fold | step $0 | d3 | 0:11}! | head! | bits! | `*</code></pre>
+<!-- /gen -->
+</section>
+
+<section class="part" aria-labelledby="h-lib">
+  <h2 id="h-lib">The standard library is Crossbow</h2>
+  <div class="cols">
+    <div>
+      <p>Only the primitives are written in Haskell: arithmetic, <code>foldl</code>, <code>map</code>, <code>filter</code>, <code>zip</code>, <code>fork</code>, <code>if</code> and so on. Everything else is defined in <code>lib.cb</code>, loaded before your first line, in Crossbow itself. <code>{…}</code> is a lambda whose arguments are <code>$0</code>, <code>$1</code>, …, and a lambda that never mentions an argument is fed the pipeline's value as <code>$0</code>.</p>
+      <p><code>enum</code> shows the intended style: fork the list into two copies, turn one into its indices, and zip them, with no names for intermediate values. <code>pairs</code> zips a list with itself shifted by one; <code>windows</code> takes the tails, transposes them and trims the ragged end.</p>
+    </div>
+    <div>
+      <!-- gen:lib -->
+<pre tabindex="0"><code># Basic
+id &lt;- {null|$0}
+const &lt;- {$1|null|$0}
+
+# Parsing and IO
+aoc &lt;- {((((&quot;test/aoc_input/&quot; ++ (string $0)) ++ &quot;/&quot;) ++ (string $1)) ++ &quot;.txt&quot;) | read}
+ints &lt;- {lines|int}
+
+# Bools and Predicates
+not &lt;- {if | $0 | False | True}
+odd &lt;- {mod $0 2|bool}
+even &lt;- {odd $0|not}
+lengthy &lt;- {$1|length|(== $0)}
+
+# Numerical
+min &lt;- {if | ($0 &lt; $1) | $0 | $1}
+max &lt;- {if | ($0 &gt; $1) | $0 | $1}
+
+# List Operations
+fold &lt;- foldl
+scan &lt;- scanl
+head &lt;- ix 0
+tail &lt;- drop 1
+foldl1 &lt;- {foldl | $0 | head $1 | tail $1}
+scanl1 &lt;- {scanl | $0 | head $1 | tail $1}
+reverse &lt;- {foldl | flip cons | [] | $0}
+length &lt;- {map (const 1) | sum}
+sum &lt;- {foldl|+|0|$0}
+minOn &lt;- {map $0 [$1, $2]|monadic &lt;= |if|$1|$2}
+maxOn &lt;- {map $0 [$1, $2]|monadic &gt; |if|$1|$2}
+maximum &lt;- foldl1 max
+minimum &lt;- foldl1 min
+maximumOn &lt;- {$1 | foldl1 (maxOn $0)}
+minimumOn &lt;- {$1 | foldl1 (minOn $0)}
+count &lt;- {filter $0 $1 | length}
+mode &lt;- {counts|maximumOn snd|fst}
+antimode &lt;- {counts|minimumOn snd|fst}
+pairs &lt;- {$0|fork 2|[id, drop 1]|monadic zip}
+square &lt;- {$0 | fork (length $0)}
+enum &lt;- {$0|fork 2|[length,id]|[range 0, id]|monadic zip}
+windows &lt;- {$1|tails|take $0|transpose|take ((1 + length $1) - $0)}
+
+# Accessor / Setter Aliases
+first &lt;- nap 0
+second &lt;- nap 1
+third &lt;- nap 2
+fst &lt;- ix 0
+snd &lt;- ix 1
+thd &lt;- ix 2</code></pre>
+<!-- /gen -->
+    </div>
+  </div>
+</section>
+
+<section class="part" aria-labelledby="h-run">
+  <h2 id="h-run">How it runs</h2>
+  <figure>
+    <div class="fig" tabindex="0">
+      <!-- fig:runtime -->
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 290" width="940" height="290" role="img" aria-labelledby="runtime-t runtime-d">
+<title id="runtime-t">How a line runs</title>
+<desc id="runtime-d">How the interpreter runs a line. The parser, written with Parsec, splits the line into clauses at each | and parses each clause into values: numbers, strings, lists, ranges, functions with some arguments supplied, lambdas in braces whose arguments are $0, $1 and so on, f! for map, _n for indexing, and `f for a function taking one list of arguments. The evaluator runs the clauses left to right, feeding each result into the next clause as its next argument. Every name is looked up in one table: it starts with the built-in functions written in Haskell, and each binding made with &lt;- adds a name or replaces one, beginning with the standard library lib.cb, which is itself Crossbow.</desc>
+<defs><marker id="runtime-tip-b" class="k-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0 1L10 5L0 9z"/></marker><marker id="runtime-tip-c" class="k-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0 1L10 5L0 9z"/></marker><marker id="runtime-tip-ink" class="k-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0 1L10 5L0 9z"/></marker><marker id="runtime-tip-muted" class="k-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0 1L10 5L0 9z"/></marker></defs>
+<g class="k-ink"><path class="edge" d="M185.0 80.0 L225.0 80.0" stroke-width="1.5" marker-end="url(#runtime-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M415.0 80.0 L460.0 80.0" stroke-width="1.5" marker-end="url(#runtime-tip-ink)"/></g>
+<g class="k-ink"><path class="edge" d="M660.0 80.0 L695.0 80.0" stroke-width="1.5" marker-end="url(#runtime-tip-ink)"/></g>
+<g class="k-b"><path class="edge" d="M800.0 108.0 L800.0 197.0" stroke-width="1.5" marker-end="url(#runtime-tip-b)"/></g>
+<g class="k-muted"><path class="edge" d="M435.0 225.0 L460.0 225.0" stroke-width="1.5" marker-end="url(#runtime-tip-muted)"/></g>
+<g class="k-c"><path class="edge" d="M660.0 225.0 L695.0 225.0" stroke-width="1.5" marker-end="url(#runtime-tip-c)"/></g>
+<g class="k-file"><rect class="shadow" x="9.0" y="56.0" width="180.0" height="56.0"/><rect class="node" x="5.0" y="52.0" width="180.0" height="56.0" rx="1.5"/><text x="95.0" y="77.0" font-size="15" text-anchor="middle" class="lbl">a line of text</text><text x="95.0" y="94.0" font-size="12.5" text-anchor="middle" class="sub">1:10 | filter (even) | sum</text></g>
+<g class="k-ink"><rect class="shadow" x="229.0" y="56.0" width="190.0" height="56.0"/><rect class="node" x="225.0" y="52.0" width="190.0" height="56.0" rx="1.5"/><text x="320.0" y="77.0" font-size="15" text-anchor="middle" class="lbl">parser</text><text x="320.0" y="94.0" font-size="12.5" text-anchor="middle" class="sub">Parsec: clauses split at |</text></g>
+<g class="k-b"><rect class="shadow" x="464.0" y="56.0" width="200.0" height="56.0"/><rect class="node" x="460.0" y="52.0" width="200.0" height="56.0" rx="1.5"/><text x="560.0" y="77.0" font-size="15" text-anchor="middle" class="lbl">clauses of values</text><text x="560.0" y="94.0" font-size="12.5" text-anchor="middle" class="sub">functions, lambdas, lists…</text></g>
+<g class="k-accent"><rect class="shadow" x="699.0" y="56.0" width="210.0" height="56.0"/><rect class="node" x="695.0" y="52.0" width="210.0" height="56.0" rx="1.5"/><text x="800.0" y="77.0" font-size="15" text-anchor="middle" class="lbl">evaluator</text><text x="800.0" y="94.0" font-size="12.5" text-anchor="middle" class="sub">each result → next clause</text></g>
+<g class="k-muted"><rect class="shadow" x="229.0" y="201.0" width="210.0" height="56.0"/><rect class="node" x="225.0" y="197.0" width="210.0" height="56.0" rx="1.5"/><text x="330.0" y="222.0" font-size="15" text-anchor="middle" class="lbl">Haskell builtins</text><text x="330.0" y="239.0" font-size="12.5" text-anchor="middle" class="sub">the table starts here</text></g>
+<g class="k-c"><rect class="shadow" x="464.0" y="201.0" width="200.0" height="56.0"/><rect class="node" x="460.0" y="197.0" width="200.0" height="56.0" rx="1.5"/><text x="560.0" y="222.0" font-size="15" text-anchor="middle" class="lbl">&lt;- bindings</text><text x="560.0" y="239.0" font-size="12.5" text-anchor="middle" class="sub">lib.cb, then yours</text></g>
+<g class="k-b"><rect class="shadow" x="699.0" y="201.0" width="210.0" height="56.0"/><rect class="node" x="695.0" y="197.0" width="210.0" height="56.0" rx="1.5"/><text x="800.0" y="222.0" font-size="15" text-anchor="middle" class="lbl">one name table</text><text x="800.0" y="239.0" font-size="12.5" text-anchor="middle" class="sub">a binding adds or replaces</text></g>
+<g class="k-b"><rect class="lab-bg" x="775.5" y="142.5" width="49.0" height="20.0"/><text x="800.0" y="156.5" font-size="12" text-anchor="middle" class="elabel">names</text></g>
+</svg>
+<!-- /fig -->
+    </div>
+    <figcaption><b>One table of names.</b> A binding made with <code>&lt;-</code> can replace a built-in of the same name.</figcaption>
+  </figure>
+  <p>The interpreter is about 1,400 lines of Haskell: a Parsec parser, a value type with integers, doubles, booleans, characters, lists, sets, maps, functions and lambdas, and an evaluator in a state monad that holds the name table. <code>crossbow repl</code> starts a prompt with tab completion over the known names; <code>crossbow FILE</code> runs a file and prints each line's result.</p>
+</section>
+
+<section class="part" aria-labelledby="h-edges">
+  <h2 id="h-edges">Rough edges</h2>
+  <ul>
+    <li><b>Errors in built-ins end the program.</b> A built-in given the wrong kind of value hits a non-exhaustive pattern in its Haskell implementation and the interpreter exits, REPL included. The README's own <code>filter (even) (sum 1:10)</code> passes <code>filter</code> a number:</li>
+  </ul>
+  <!-- gen:crash -->
+<pre tabindex="0"><code><span class="p">filter (even) (sum 1:10)</span>
+<span class="e">crossbow: src/Crossbow/Evaluator.hs:(407,19)-(415,79): Non-exhaustive patterns in function filter</span></code></pre>
+<!-- /gen -->
+  <ul>
+    <li><b>The REPL does not stop at end of input:</b> on Ctrl-D it keeps prompting.</li>
+    <li><b>Weak typing has no guard rails:</b> mixed lists are legal, and most type mistakes surface as one of the crashes above rather than a message.</li>
+  </ul>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Crossbow</span>
+  <a href="https://github.com/harryaskham/crossbow">Source</a>
+  <a href="https://a.skh.am/advent/">Advent of Code solutions in Haskell</a>
+  <a href="https://a.skh.am/all/">More at a.skh.am/all</a>
+</footer>
+</div>
+<script src="assets/site.js" defer></script>
+</body>
+</html>
