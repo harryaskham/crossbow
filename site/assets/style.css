@@ -1,0 +1,33 @@
+/* Crossbow — a fletcher's workbench. Parchment, dark walnut ink, fletching green and brass;
+   Anybody stretched wide for headings (an arrow in flight), Onest for prose, JetBrains Mono for
+   code. Pipes in code are picked out in brass. */
+
+:root {
+  --page-bg: #f3efe6; --page-text: #2a2723; --page-muted: #6a645a; --page-line: #ddd5c5;
+  --page-accent: #2f6b4f; --strong: #1b1916; --surface: #fbf8f2; --raise: #e9e3d6;
+  --code-bg: #2a2723; --code-text: #efe8da;
+  --page-ui: "Onest", system-ui, sans-serif;
+  --display: "Anybody", "Onest", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --brass: #b7791f;
+  --k-ink: #2a2723; --k-accent: var(--brass); --k-b: var(--page-accent); --k-c: #6a4fa0; --k-muted: #8a8478; --k-file: #6a645a;
+}
+
+header.intro h1 { font-size: clamp(52px, 8vw, 104px); font-weight: 800; font-stretch: 140%; letter-spacing: -0.02em; }
+header.intro h1::after { content: " →"; color: var(--brass); font-stretch: 100%; }
+h2 { font-weight: 700; font-stretch: 125%; }
+:not(pre) > code { background: var(--raise); color: var(--strong); }
+pre { background: var(--code-bg); color: var(--code-text); }
+pre .p { color: #f3d9a4; }
+pre .p::before { content: "|-> "; color: #8fc7a8; }
+pre .e { color: #ff9f8a; }
+.fig { padding: 16px 12px; background: var(--surface); border: 1px solid var(--page-line); border-radius: 8px; }
+.dg .lab-bg { fill: var(--surface); }
+.dg .halo { stroke: var(--surface); }
+table.ex { min-width: 640px; }
+table.ex td { vertical-align: baseline; }
+table.ex td code { white-space: pre-wrap; overflow-wrap: anywhere; }
+table.ex td.note { color: var(--page-muted); font-size: 14px; }
+p.note { font-size: 14.5px; color: var(--page-muted); }
+@media (max-width: 640px) { header.intro h1 { font-size: 44px; font-stretch: 115%; } h2 { font-stretch: 110%; } }
+code, pre { font-variant-ligatures: none; }
